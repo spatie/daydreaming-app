@@ -55,6 +55,24 @@ final class AppModel: ObservableObject {
             settings.sourcePath = imported.originalURL.path
             settings.sourceDigest = imported.digest
         }
+        if let sourcePath = settings.sourcePath, !ImageStore.owns(sourcePath) {
+            if let imported = try? ImageStore.importImage(from: URL(fileURLWithPath: sourcePath)) {
+                settings.sourcePath = imported.originalURL.path
+                settings.sourceDigest = imported.digest
+            } else {
+                settings.sourcePath = nil
+                settings.sourceDigest = nil
+                settings.automaticUpdates = false
+                onboardingComplete = false
+                status = "Choose your base image again"
+                detail = "The original needs to be selected again for this installed app."
+            }
+        }
+        if settings.sourcePath == nil ||
+            !FileManager.default.fileExists(atPath: settings.sourcePath ?? "") {
+            settings.automaticUpdates = false
+            onboardingComplete = false
+        }
         if !onboardingComplete {
             settings.automaticUpdates = false
         }
@@ -63,6 +81,7 @@ final class AppModel: ObservableObject {
         }
 
         if let path = UserDefaults.standard.string(forKey: "displayedImagePath"),
+           ImageStore.owns(path),
            FileManager.default.fileExists(atPath: path) {
             displayedImageURL = URL(fileURLWithPath: path)
         } else if let path = settings.sourcePath {

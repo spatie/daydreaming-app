@@ -17,6 +17,11 @@ enum ImageStore {
 
     static var cacheDirectory: URL { root.appendingPathComponent("Cache", isDirectory: true) }
 
+    static func owns(_ path: String) -> Bool {
+        let normalized = URL(fileURLWithPath: path).standardizedFileURL.path
+        return normalized.hasPrefix(root.standardizedFileURL.path + "/")
+    }
+
     static func importImage(from selectedURL: URL) throws -> ImportedImage {
         let directory = root.appendingPathComponent("Sources", isDirectory: true)
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
