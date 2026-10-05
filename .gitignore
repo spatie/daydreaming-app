@@ -1,0 +1,5 @@
+.build/
+.build-context/
+.DS_Store
+xcuserdata/
+*.xcuserstate
