@@ -1075,7 +1075,6 @@ final class AppModel: ObservableObject {
                FileManager.default.fileExists(atPath: ImageStore.uploadURL(for: path).path) {
                 stopAutomatic()
                 adoptReusableBuiltInPicture(URL(fileURLWithPath: path))
-                UserDefaults.standard.set(path, forKey: "displayedImagePath")
             } else {
                 importImage(url)
             }
@@ -1093,6 +1092,7 @@ final class AppModel: ObservableObject {
         updated.sourceCrop = nil
         settings = updated
         if lastUpdated == nil { displayedImageURL = url }
+        prefersChosenOriginal = true
         refreshSelectedPreview()
     }
 
@@ -1615,6 +1615,7 @@ final class AppModel: ObservableObject {
         settings.originalPictureDigest = digest
         rememberPicture(digest: digest, name: settings.pictureName ?? originalURL.lastPathComponent, url: originalURL)
         if lastUpdated == nil && (!onboardingComplete || showingOriginal || displayedImageURL == nil) { displayedImageURL = originalURL }
+        prefersChosenOriginal = true
     }
 
     func dismissSourceWarning() { sourceWarning = nil }

@@ -4,6 +4,24 @@ import XCTest
 final class AppModelHourlyTests: XCTestCase {
 
     @MainActor
+    func testChoosingYosemitePreviewsSourceWithoutClaimingDesktopWasChanged() async throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        let model = fake.model()
+        defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+        await model.refreshIfNeeded(userInitiated: true)
+        await appEventually { fake.applied.count == 1 && !model.isGenerating }
+        let desktop = model.displayedImageURL
+        let updated = model.lastUpdated
+        model.useBuiltInPicture(replaceCurrent: true)
+        XCTAssertEqual(model.displayedImageURL, desktop)
+        XCTAssertEqual(model.lastUpdated, updated)
+        XCTAssertEqual(model.canvasImageURL, fake.source)
+        XCTAssertEqual(fake.created.count, 1)
+        XCTAssertEqual(fake.applied.count, 1)
+    }
+
+    @MainActor
     func testRejectedKeyShowsBlockedUpdatesAndPreservesActualDesktop() async throws {
         let fake = try AppHourlyFake()
         defer { fake.removeFiles() }

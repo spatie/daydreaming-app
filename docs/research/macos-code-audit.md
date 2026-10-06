@@ -8,6 +8,7 @@ Reviewed on 6 October 2026 against the relevant macOS architecture, concurrency,
 - Treat a corrupt current usage ledger as unavailable storage, not as a fresh daily allowance. Preserve the bytes, block new paid requests, and allow cached application without a charge. Legacy counts migrate only when the current ledger is absent.
 - Share desktop application and timestamp persistence. Original restoration and cache clearing now advance the successful-update time only after the desktop accepts the image. A failed apply does not change it.
 - Keep the active desktop file when the original needed for cache clearing is missing.
+- Keep the last-applied desktop identity when cropping or choosing another original. Show the new picture as a preview until application succeeds. Expose blocked API-key updates separately from a ready cached preview.
 - Share background picture importing. Decode, hash and write away from the main actor, keep the security scope alive in the worker, and discard cancelled replacements. Setup cannot finish with the old picture while a replacement is importing.
 - Assign the new picture name before recording its history.
 - Remove unused palette sampling from ready artwork and thumbnails.
