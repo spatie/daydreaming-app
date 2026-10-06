@@ -29,3 +29,5 @@ As checked on October 7, 2026, the [official Sign in with ChatGPT preview limita
 ## Verification
 
 Offline tests cover single-driver routing, credential isolation, missing/unknown-provider rejection, edit input and one-image request mapping, legacy cache and settings migration, provider-specific disclosure and switching during both unpaid preparation and an already paid request. No owner's credentials are read by the tests and no image generation is performed against a real service.
+
+New credentials are checked through the driver's non-generating authentication method before Keychain storage. OpenAI checks the Models endpoint without uploading a picture. The UI reports API authentication separately from image permissions and available credit. Cancelling a check or switching providers before it finishes never saves the candidate key.

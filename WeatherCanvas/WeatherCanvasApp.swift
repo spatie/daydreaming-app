@@ -32,7 +32,8 @@ struct DaydreamingApp: App {
             get: { model.showMenuBar },
             set: { if model.showMenuBar != $0 { model.showMenuBar = $0 } }
         )) { MenuBarContent().environmentObject(model) } label: {
-            Image("MenuBarIcon").renderingMode(.template).accessibilityLabel("Daydreaming")
+            Image(nsImage: MenuBarActivityIcon.image(isActive: model.hasMenuActivity))
+                .accessibilityLabel(model.hasMenuActivity ? "Daydreaming · Generating" : "Daydreaming")
         }
     }
 }
@@ -217,6 +218,8 @@ private struct MenuBarContent: View {
         }
         Divider()
         Button("Quit Daydreaming") { NSApp.terminate(nil) }
+        Divider()
+        Text(model.lastGenerationMenuLabel).disabled(true)
     }
 
     private func present(_ presentation: MainPresentation) {
@@ -239,5 +242,22 @@ private extension AppModel {
                 else { self.stopAutomatic() }
             }
         )
+    }
+}
+
+@MainActor
+private enum MenuBarActivityIcon {
+    static func image(isActive: Bool) -> NSImage {
+        let original = NSImage(named: "MenuBarIcon") ?? NSImage(systemSymbolName: "photo", accessibilityDescription: "Daydreaming")!
+        let image = NSImage(size: NSSize(width: isActive ? 23 : 18, height: 18), flipped: false) { _ in
+            original.draw(in: NSRect(x: 0, y: 0, width: 18, height: 18))
+            if isActive {
+                NSColor.black.setFill()
+                NSBezierPath(ovalIn: NSRect(x: 19, y: 12, width: 3, height: 3)).fill()
+            }
+            return true
+        }
+        image.isTemplate = true
+        return image
     }
 }

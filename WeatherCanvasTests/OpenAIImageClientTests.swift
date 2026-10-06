@@ -2,6 +2,31 @@ import XCTest
 @testable import Daydreaming
 
 final class OpenAIImageClientTests: XCTestCase {
+    func testKeyVerificationOnlyAuthenticatesWithoutSendingPicturesOrCreatingImages() async throws {
+        let client = OpenAIImageClient(transport: { request in
+            XCTAssertEqual(request.url?.absoluteString, "https://api.openai.com/v1/models")
+            XCTAssertEqual(request.httpMethod, "GET")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer fixture-key")
+            XCTAssertEqual(request.timeoutInterval, 20)
+            XCTAssertNil(request.httpBody)
+            return (Data("{\"data\":[{\"id\":\"fixture-model\"}]}".utf8),
+                    HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+        })
+        try await client.verifyCredential("fixture-key")
+    }
+
+    func testKeyVerificationRejectsUnauthorizedAndMalformedSuccessResponses() async {
+        for code in [401, 403, 200, 302, 500] {
+            let client = OpenAIImageClient(transport: { request in
+                (Data("{}".utf8), HTTPURLResponse(url: request.url!, statusCode: code, httpVersion: nil, headerFields: nil)!)
+            })
+            do {
+                try await client.verifyCredential("fixture-key")
+                XCTFail("Invalid connection must not be accepted: \(code)")
+            } catch { }
+        }
+    }
+
     @MainActor
     func testRejectedRequestRefundsOnlyAfterTheRequestWasSent() async throws {
         let source = try sourceFile()

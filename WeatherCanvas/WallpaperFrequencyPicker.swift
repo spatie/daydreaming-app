@@ -26,25 +26,6 @@ struct WallpaperFrequencyPicker: View {
                 }
             }
             .help(frequencyHelp)
-            if model.settings.interval == .twiceDaily {
-                Text("Around \(model.hourLabel(7)) and \(model.hourLabel(19))")
-                    .font(.caption).foregroundStyle(.secondary)
-                    .help("Morning and evening, in your local time.")
-            }
-            Text(model.automaticUpdateStatus)
-                .font(.caption.weight(.medium)).foregroundStyle(.primary)
-                .fixedSize(horizontal: false, vertical: true)
-            if let desktop = model.desktopPictureDescription {
-                Text(desktop)
-                    .font(.caption).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if let lastUpdated = model.lastUpdated {
-                Text("Applied to desktop \(lastUpdated.formatted(date: .abbreviated, time: .shortened))")
-                    .font(.caption).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .help("The last time Daydreaming successfully changed your desktop wallpaper. Making a preview does not change this time.")
-            }
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Wallpaper updates")

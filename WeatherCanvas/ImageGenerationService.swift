@@ -25,6 +25,12 @@ struct ImageGenerationService {
         self.credentials = credentials
     }
 
+    func verifyCredential(_ credential: String, for configuration: ImageProviderConfiguration) async throws {
+        let driver = try registry.driver(for: configuration)
+        try await driver.verifyCredential(credential, configuration: configuration)
+        try Task.checkCancellation()
+    }
+
     func generate(_ request: ImageGenerationRequest,
                   willSend: @escaping @MainActor () async throws -> Void,
                   didReject: @escaping @MainActor (Int) -> Void) async throws -> Data {

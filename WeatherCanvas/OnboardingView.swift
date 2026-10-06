@@ -8,10 +8,12 @@ struct OnboardingView: View {
     @State private var step = 0
     @State private var key = ""
     @State private var error: String?
+    @State private var connectionTask: Task<Void, Never>?
     @FocusState private var keyFocused: Bool
 
     private let steps = ["Welcome", "Your picture", "Image creation", "Ready"]
     private var primaryTitle: String {
+        if model.isCheckingImageConnection { return "Checking…" }
         if step == 1 && model.isBuiltInPictureChosen { return "Continue with Yosemite" }
         if step == 3 {
             if model.onboardingWeatherReady { return "Start Daydreaming" }
@@ -24,7 +26,7 @@ struct OnboardingView: View {
         return "Continue"
     }
     private var canContinue: Bool {
-        guard !model.isImportingPicture else { return false }
+        guard !model.isImportingPicture, !model.isCheckingImageConnection else { return false }
         return switch step {
         case 0: true
         case 1: model.sourceImageURL != nil
@@ -64,6 +66,7 @@ struct OnboardingView: View {
             HStack(alignment: .bottom, spacing: 16) {
                 if step > 0 {
                     Button("Back") { move(to: step - 1) }
+                        .disabled(model.isCheckingImageConnection)
                         .keyboardShortcut("[", modifiers: .command)
                 }
                 if step == 3 {
@@ -96,6 +99,7 @@ struct OnboardingView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             if step == 3 { model.refreshOnboardingLocation() }
         }
+        .onDisappear { connectionTask?.cancel() }
     }
 
     @ViewBuilder
@@ -232,9 +236,13 @@ struct OnboardingView: View {
                         Label("API key saved", systemImage: "checkmark.circle")
                             .font(.callout)
                     }
+                    if model.isCheckingImageConnection {
+                        ProgressView("Checking API key…").controlSize(.small)
+                    }
                     SecureField("Paste your \(model.imageProviderName) API key", text: $key)
                         .textFieldStyle(.roundedBorder)
                         .focused($keyFocused)
+                        .disabled(model.isCheckingImageConnection)
                         .accessibilityLabel("\(model.imageProviderName) API key")
                     if let url = model.imageProviderDescriptor?.manageKeysURL { Link("Get an API Key", destination: url) }
                     Text("Your key stays in Keychain.")
@@ -293,8 +301,17 @@ struct OnboardingView: View {
             return
         }
         if step == 2 && !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            guard model.saveKey(key) else { error = model.detail; return }
-            key = ""
+            guard !model.isCheckingImageConnection else { return }
+            let requestedKey = key
+            connectionTask = Task {
+                guard await model.saveKey(requestedKey), !Task.isCancelled else {
+                    if !Task.isCancelled { error = model.keyRecoveryMessage }
+                    return
+                }
+                key = ""
+                move(to: 3)
+            }
+            return
         }
         if step == 3 {
             model.finishOnboarding()

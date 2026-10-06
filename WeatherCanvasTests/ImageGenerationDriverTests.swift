@@ -130,19 +130,22 @@ final class ImageGenerationDriverTests: XCTestCase {
     }
 
     @MainActor
-    func testSwitchingConnectionSavesOnlyItsCredentialAndNeverGenerates() throws {
+    func testSwitchingConnectionSavesOnlyItsCredentialAndNeverGenerates() async throws {
         let credentials = MemoryImageCredentials()
-        let service = ImageGenerationService(credentials: credentials)
+        let client = OpenAIImageClient(transport: { request in
+            XCTAssertEqual(request.httpMethod, "GET")
+            XCTAssertEqual(request.url?.absoluteString, "https://images.example/v1/models")
+            return (Data("{\"data\":[{\"id\":\"edit-v1\"}]}".utf8),
+                    HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+        })
+        let service = ImageGenerationService(registry: .init(drivers: [CompatibleImageDriver(client: client)]), credentials: credentials)
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
-        let services = AppModelHourlyServices(now: { .now }, sourceAvailable: { _ in false },
-            weather: { _, date in WeatherSnapshot(label: "clear", symbol: "sun.max", fetchedAt: date) },
-            readPrompt: nil, create: { _, _, _, _ in XCTFail("Configuration cannot generate"); return Data() },
-            cacheDirectory: directory, apply: { _ in XCTFail("Configuration cannot apply") },
-            loadLedger: { .init() }, saveLedger: { _ in }, loadPending: { [] }, savePending: { _ in },
-            loadApplicationRetry: { nil }, saveApplicationRetry: { _ in })
-        let model = AppModel(settings: .init(), hourlyServices: services, imageGeneration: service)
-        XCTAssertTrue(model.saveImageConnection(custom(), key: "custom-fixture-key"))
+        let model = connectionModel(service: service, directory: directory)
+        defer { model.stopBackgroundTasks() }
+        let connected = await model.saveImageConnection(custom(), key: "custom-fixture-key")
+        XCTAssertTrue(connected)
+        XCTAssertNotNil(model.imageConnectionVerifiedAt)
         XCTAssertEqual(model.settings.imageProvider, custom())
         XCTAssertFalse(model.settings.automaticUpdates)
         XCTAssertEqual(credentials.keys[custom().credentialID], "custom-fixture-key")
@@ -157,6 +160,105 @@ final class ImageGenerationDriverTests: XCTestCase {
         XCTAssertFalse(copy.previewTimeNotice.contains("OpenAI"))
         XCTAssertFalse(copy.cropDoneNotice(hasChanges: true).contains("OpenAI"))
         XCTAssertEqual(copy.cropDoneNotice(hasChanges: false), AppCopy.cropDoneNotice(hasChanges: false))
+    }
+
+    @MainActor
+    func testInvalidKeyAndOfflineVerificationKeepTheExistingConnectionAndSettings() async throws {
+        for offline in [false, true] {
+            let credentials = MemoryImageCredentials()
+            credentials.keys["openai"] = "existing-fixture-key"
+            let client = OpenAIImageClient(transport: { request in
+                if offline { throw URLError(.notConnectedToInternet) }
+                return (Data("{}".utf8), HTTPURLResponse(url: request.url!, statusCode: 401, httpVersion: nil, headerFields: nil)!)
+            })
+            let service = ImageGenerationService(registry: .init(drivers: [OpenAIImageDriver(client: client)]), credentials: credentials)
+            let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let model = connectionModel(service: service, directory: directory)
+            defer { model.stopBackgroundTasks() }
+            let settings = model.settings
+            let saved = await model.saveImageConnection(.openAI, key: "invalid-new-key")
+            XCTAssertFalse(saved)
+            XCTAssertEqual(credentials.keys, ["openai": "existing-fixture-key"])
+            XCTAssertEqual(model.settings, settings)
+            XCTAssertNil(model.imageConnectionVerifiedAt)
+            XCTAssertFalse(model.isCheckingImageConnection)
+            XCTAssertNotNil(model.keyRecoveryMessage)
+            XCTAssertEqual(model.generatedToday, 0)
+        }
+    }
+
+    @MainActor
+    func testCancelledOrSupersededCheckNeverSavesTheCredential() async throws {
+        for changeProvider in [false, true] {
+            let gate = CredentialCheckGate()
+            let credentials = MemoryImageCredentials()
+            let client = OpenAIImageClient(transport: { request in
+                await gate.wait()
+                return (Data("{\"data\":[{\"id\":\"fixture-model\"}]}".utf8),
+                        HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+            })
+            let service = ImageGenerationService(registry: .init(drivers: [OpenAIImageDriver(client: client), CompatibleImageDriver(client: client)]), credentials: credentials)
+            let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let model = connectionModel(service: service, directory: directory)
+            defer { model.stopBackgroundTasks() }
+            let task = Task { await model.saveImageConnection(.openAI, key: "candidate-key") }
+            while !(await gate.started) { await Task.yield() }
+            XCTAssertTrue(model.isCheckingImageConnection)
+            XCTAssertTrue(credentials.keys.isEmpty)
+            if changeProvider { model.selectImageProvider("compatible") }
+            else { task.cancel() }
+            await gate.release()
+            let saved = await task.value
+            XCTAssertFalse(saved)
+            XCTAssertTrue(credentials.keys.isEmpty)
+            XCTAssertNil(model.imageConnectionVerifiedAt)
+            XCTAssertFalse(model.isCheckingImageConnection)
+            XCTAssertEqual(model.settings.imageProvider.driverID, changeProvider ? "compatible" : "openai")
+            XCTAssertEqual(model.generatedToday, 0)
+        }
+    }
+
+    @MainActor
+    func testCheckingSavedConnectionDoesNotPauseUpdatesOrCreateAnything() async throws {
+        let credentials = MemoryImageCredentials()
+        credentials.keys["openai"] = "saved-fixture-key"
+        let client = OpenAIImageClient(transport: { request in
+            XCTAssertEqual(request.httpMethod, "GET")
+            let status = request.value(forHTTPHeaderField: "Authorization") == "Bearer saved-fixture-key" ? 200 : 401
+            return (Data("{\"data\":[]}".utf8), HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!)
+        })
+        let service = ImageGenerationService(registry: .init(drivers: [OpenAIImageDriver(client: client)]), credentials: credentials)
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let model = connectionModel(service: service, directory: directory)
+        defer { model.stopBackgroundTasks() }
+        let settings = model.settings
+        let checked = await model.checkImageConnection()
+        XCTAssertTrue(checked)
+        XCTAssertEqual(model.settings, settings)
+        XCTAssertEqual(credentials.keys, ["openai": "saved-fixture-key"])
+        XCTAssertNotNil(model.imageConnectionVerifiedAt)
+        XCTAssertEqual(model.generatedToday, 0)
+        credentials.keys["openai"] = "revoked-fixture-key"
+        let rejected = await model.checkImageConnection()
+        XCTAssertFalse(rejected)
+        XCTAssertNil(model.imageConnectionVerifiedAt)
+        XCTAssertEqual(model.settings, settings)
+        XCTAssertEqual(credentials.keys, ["openai": "revoked-fixture-key"])
+        XCTAssertEqual(model.generatedToday, 0)
+    }
+
+    @MainActor
+    private func connectionModel(service: ImageGenerationService, directory: URL) -> AppModel {
+        let services = AppModelHourlyServices(now: { .now }, sourceAvailable: { _ in false },
+            weather: { _, date in WeatherSnapshot(label: "clear", symbol: "sun.max", fetchedAt: date) },
+            readPrompt: nil, create: { _, _, _, _ in XCTFail("Connection checks cannot generate"); return Data() },
+            cacheDirectory: directory, apply: { _ in XCTFail("Connection checks cannot apply") },
+            loadLedger: { .init() }, saveLedger: { _ in }, loadPending: { [] }, savePending: { _ in },
+            loadApplicationRetry: { nil }, saveApplicationRetry: { _ in })
+        return AppModel(settings: .init(), hourlyServices: services, imageGeneration: service)
     }
 
     private func custom() -> ImageProviderConfiguration {
@@ -190,6 +292,8 @@ private final class RecordingImageDriver: ImageGenerationDriver {
     }
     func validate(_ configuration: ImageProviderConfiguration) throws { }
     @MainActor
+    func verifyCredential(_ credential: String, configuration: ImageProviderConfiguration) async throws { }
+    @MainActor
     func edit(_ request: ImageGenerationRequest, credential: String,
               willSend: @escaping @MainActor () async throws -> Void,
               didReject: @escaping @MainActor (Int) -> Void) async throws -> Data {
@@ -198,4 +302,16 @@ private final class RecordingImageDriver: ImageGenerationDriver {
         lastCredential = credential
         return Data("\(descriptor.id) result".utf8)
     }
+}
+
+private actor CredentialCheckGate {
+    private var continuation: CheckedContinuation<Void, Never>?
+    private(set) var started = false
+    func wait() async {
+        await withCheckedContinuation { continuation in
+            self.continuation = continuation
+            started = true
+        }
+    }
+    func release() { continuation?.resume(); continuation = nil }
 }

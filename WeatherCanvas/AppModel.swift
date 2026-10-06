@@ -76,6 +76,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var isGenerating = false
     @Published private(set) var hasSavedKey = false
     @Published private(set) var keyRecoveryMessage: String?
+    @Published private(set) var isCheckingImageConnection = false
+    @Published private(set) var imageConnectionVerifiedAt: Date?
     @Published private(set) var onboardingLocationState: OnboardingLocationState = .notRequested
     @Published private(set) var generatedToday = 0
     @Published private(set) var generationStorageError: String?
@@ -95,6 +97,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var activity: WallpaperActivity = .idle
     @Published private(set) var recovery: WallpaperRecovery?
     @Published private(set) var lastUpdated: Date?
+    @Published private(set) var lastImageGeneratedAt: Date?
     @Published var presentation: MainPresentation? {
         didSet {
             if presentation == .crop {
@@ -380,6 +383,8 @@ final class AppModel: ObservableObject {
     }
 
     private func finishHourlyInitialization() {
+        let savedGeneration = isDesignPreview ? nil : UserDefaults.standard.object(forKey: "lastImageGeneration") as? Date
+        lastImageGeneratedAt = [savedGeneration, hourCache?.entries.map(\.createdAt).max()].compactMap { $0 }.max()
         hasFinishedLoading = true
         pictureHistory = PictureHistory(directory: hourlyServices?.cacheDirectory.appendingPathComponent("History") ?? ImageStore.root)
         backfillPictureHistory()
@@ -763,7 +768,7 @@ final class AppModel: ObservableObject {
 
     var automaticUpdateStatus: String {
         guard settings.automaticUpdates else { return "Automatic updates paused" }
-        if activity == .failed, recovery == .apiKey { return "Updates blocked · replace API key" }
+        if activity == .failed, recovery == .apiKey { return "Updates blocked · check Image AI in Settings" }
         if activity == .failed, recovery == .billing { return "Updates blocked · check \(imageCreditName)" }
         if remainingGenerations == 0 { return "Daily image limit reached" }
         if isMakingCurrentWallpaper || isAdoptingWallpaper { return "Updating your wallpaper…" }
@@ -970,6 +975,7 @@ final class AppModel: ObservableObject {
     }
 
     func setPreviewWindow(_ window: NSWindow) { previewWindow = window }
+    func closeWallpaperWindow() { previewWindow?.close() }
 
     private var isPreviewWindowActive: Bool {
         guard !isPreparingForAppUpdate, onboardingComplete, presentation != .crop, stagedPictureURL == nil else { return false }
@@ -1072,12 +1078,17 @@ final class AppModel: ObservableObject {
     var usageHelp: String { "Uses \(imageCreditName)" }
     var imageBillingNotice: String { "\(imageProviderName) bills your account for each new image." }
 
+    var hasMenuActivity: Bool {
+        isGenerating || isMakingCurrentWallpaper || isAdoptingWallpaper
+            || activity == .checkingWeather || activity == .readingSources || activity == .applying
+    }
+
     var menuUpdateStatus: String? {
         if activity == .failed || activity == .waitingForLocation { return status }
         switch activity {
         case .checkingWeather: return "Checking local weather…"
         case .readingSources: return "Reading your idea…"
-        case .generating: return isMakingCurrentWallpaper ? "Making your wallpaper…" : "Making a preview…"
+        case .generating: return "Generating…"
         case .applying: return "Applying your wallpaper…"
         default: break
         }
@@ -1087,6 +1098,11 @@ final class AppModel: ObservableObject {
             return "Wallpaper updated at \(lastUpdated.formatted(date: .omitted, time: .shortened))"
         }
         return nil
+    }
+
+    var lastGenerationMenuLabel: String {
+        guard let lastImageGeneratedAt else { return "No images generated yet" }
+        return "Last generated: \(lastImageGeneratedAt.formatted(date: .abbreviated, time: .shortened))"
     }
 
     func selectImageProvider(_ driverID: String) {
@@ -1102,33 +1118,63 @@ final class AppModel: ObservableObject {
     }
 
     @discardableResult
-    func saveImageConnection(_ configuration: ImageProviderConfiguration, key: String) -> Bool {
+    func saveImageConnection(_ configuration: ImageProviderConfiguration, key: String) async -> Bool {
+        await verifyImageConnection(configuration, key: key, saving: true)
+    }
+
+    @discardableResult
+    func checkImageConnection() async -> Bool {
+        await verifyImageConnection(settings.imageProvider, key: "", saving: false)
+    }
+
+    private func verifyImageConnection(_ configuration: ImageProviderConfiguration, key: String, saving: Bool) async -> Bool {
         guard !isDesignPreview || hourlyServices != nil else { return false }
-        guard presentation != .crop, !isPreparingForAppUpdate else { return false }
+        guard !isCheckingImageConnection, presentation != .crop, !isPreparingForAppUpdate else { return false }
+        let originalConfiguration = settings.imageProvider
+        isCheckingImageConnection = true
+        keyRecoveryMessage = nil
+        defer { isCheckingImageConnection = false }
         do {
-            _ = try imageGeneration.registry.driver(for: configuration)
             let cleaned = key.trimmingCharacters(in: .whitespacesAndNewlines)
-            if cleaned.isEmpty {
-                guard try imageGeneration.credentials.read(for: configuration) != nil else {
-                    throw ImageDriverError.credentialRequired(imageGeneration.registry.descriptor(for: configuration)?.name ?? "image provider")
-                }
-            } else { try imageGeneration.credentials.save(cleaned, for: configuration) }
-            // Replacing a key also invalidates unpaid work for the current connection.
-            desktopSelectionRevision += 1
-            cancelQueue()
-            draftPreviewSettings = nil
-            var updated = settings
-            updated.imageProvider = configuration
-            updated.imageProviderConfigurations[configuration.driverID] = configuration
-            updated.automaticUpdates = false
-            settings = updated
-            stopAutomatic()
-            refreshImageConnection()
-            activity = .idle; recovery = nil
-            status = "\(imageProviderName) connected"
-            detail = "Your desktop stays in place until you use your picture and idea."
+            let credential = cleaned.isEmpty ? try imageGeneration.credentials.read(for: configuration) : cleaned
+            guard let credential, !credential.isEmpty else { throw ImageDriverError.credentialRequired(imageProviderName) }
+            try await imageGeneration.verifyCredential(credential, for: configuration)
+            try Task.checkCancellation()
+            guard settings.imageProvider == originalConfiguration, !isPreparingForAppUpdate,
+                  presentation != .crop else { throw CancellationError() }
+            if saving {
+                try imageGeneration.credentials.save(credential, for: configuration)
+                desktopSelectionRevision += 1
+                cancelQueue()
+                draftPreviewSettings = nil
+                var updated = settings
+                updated.imageProvider = configuration
+                updated.imageProviderConfigurations[configuration.driverID] = configuration
+                updated.automaticUpdates = false
+                settings = updated
+                stopAutomatic()
+                refreshImageConnection()
+                activity = .idle; recovery = nil
+                status = "\(imageProviderName) connected"
+                detail = "Your desktop stays in place until you use your picture and idea."
+            }
+            imageConnectionVerifiedAt = pipelineNow
+            if !isDesignPreview {
+                UserDefaults.standard.set(imageConnectionVerifiedAt, forKey: "imageConnectionVerifiedAt." + configuration.credentialID)
+            }
             return true
-        } catch { keyRecoveryMessage = error.localizedDescription; show(error); return false }
+        } catch is CancellationError { return false }
+        catch {
+            guard !Task.isCancelled else { return false }
+            if !saving, case ImageClientError.invalidKey = error {
+                imageConnectionVerifiedAt = nil
+                if !isDesignPreview {
+                    UserDefaults.standard.removeObject(forKey: "imageConnectionVerifiedAt." + configuration.credentialID)
+                }
+            }
+            keyRecoveryMessage = error.localizedDescription
+            return false
+        }
     }
 
     private func refreshImageConnection() {
@@ -1139,6 +1185,8 @@ final class AppModel: ObservableObject {
         do {
             _ = try imageGeneration.registry.driver(for: settings.imageProvider)
             hasSavedKey = try imageGeneration.credentials.read(for: settings.imageProvider) != nil
+            imageConnectionVerifiedAt = hasSavedKey
+                ? UserDefaults.standard.object(forKey: "imageConnectionVerifiedAt." + settings.imageProvider.credentialID) as? Date : nil
             keyRecoveryMessage = nil
         } catch { hasSavedKey = false; keyRecoveryMessage = error.localizedDescription }
     }
@@ -1345,36 +1393,16 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func saveKey(_ key: String) -> Bool {
-        guard !isDesignPreview else { return false }
-        let cleaned = key.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleaned.isEmpty else {
-            status = "Enter an API key first"
-            return false
-        }
-
-        do {
-            _ = try imageGeneration.registry.driver(for: settings.imageProvider)
-            try imageGeneration.credentials.save(cleaned, for: settings.imageProvider)
-            hasSavedKey = true
-            keyRecoveryMessage = nil
-            if recovery == .apiKey {
-                activity = .idle
-                recovery = nil
-                status = "Ready to try your new key"
-                detail = "Create a wallpaper when you're ready. " + imageBillingNotice
-            }
-            return true
-        } catch {
-            show(error)
-            return false
-        }
+    func saveKey(_ key: String) async -> Bool {
+        await saveImageConnection(settings.imageProvider, key: key)
     }
 
     func removeKey() {
         guard !isDesignPreview else { return }
         do {
             try imageGeneration.credentials.remove(for: settings.imageProvider)
+            imageConnectionVerifiedAt = nil
+            UserDefaults.standard.removeObject(forKey: "imageConnectionVerifiedAt." + settings.imageProvider.credentialID)
             hasSavedKey = false
             stopAutomatic()
             cancelQueue()
@@ -2304,6 +2332,8 @@ final class AppModel: ObservableObject {
                                       settingsSnapshot: job.settings,
                                       sourceDigest: job.settings.originalPictureDigest ?? job.settings.sourceDigest,
                                       sourcePicturePath: job.settings.uncroppedSourcePath ?? job.settings.sourcePath)
+                lastImageGeneratedAt = pipelineNow
+                if !isDesignPreview { UserDefaults.standard.set(lastImageGeneratedAt, forKey: "lastImageGeneration") }
                 savedWallpaperRevision += 1
                 try hourCache?.prune(preserving: [url] + [displayedImageURL, applicationRetry?.url].compactMap { $0 })
             },
@@ -2705,6 +2735,10 @@ final class AppModel: ObservableObject {
             status = "Weather needs your attention"
             recovery = .weather
         case ImageClientError.invalidKey, ImageClientError.unauthorized, ImageDriverError.credentialRequired:
+            imageConnectionVerifiedAt = nil
+            if !isDesignPreview {
+                UserDefaults.standard.removeObject(forKey: "imageConnectionVerifiedAt." + settings.imageProvider.credentialID)
+            }
             status = "Your API key needs attention"
             recovery = .apiKey
         case ImageClientError.billing, ImageClientError.creditUnavailable:

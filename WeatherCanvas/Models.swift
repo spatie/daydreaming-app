@@ -130,7 +130,7 @@ enum WallpaperRecovery {
     var title: String {
         switch self {
         case .weather: "Choose Weather…"
-        case .apiKey: "Replace API Key…"
+        case .apiKey: "Image AI Settings…"
         case .billing: "Check Image Provider Billing"
         case .image: "Choose a Picture…"
         case .retry: "Try Again"

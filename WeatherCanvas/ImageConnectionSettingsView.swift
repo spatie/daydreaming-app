@@ -6,6 +6,7 @@ struct ImageConnectionSettingsView: View {
     @State private var key = ""
     @State private var error: String?
     @State private var showingRemoval = false
+    @State private var connectionTask: Task<Void, Never>?
 
     var body: some View {
         Section {
@@ -37,10 +38,15 @@ struct ImageConnectionSettingsView: View {
 
             if model.hasImageConnection {
                 HStack {
-                    Label(model.recovery == .apiKey ? "API key needs attention" : "\(model.imageProviderName) API key saved",
-                          systemImage: model.recovery == .apiKey ? "exclamationmark.circle" : "checkmark.circle")
-                        .help("Your API key is stored in Keychain.")
+                    Label(connectionLabel, systemImage: model.imageConnectionVerifiedAt != nil ? "checkmark.circle.fill" : "key")
+                        .foregroundStyle(model.imageConnectionVerifiedAt != nil ? Color.green : Color.primary)
+                        .help(connectionHelp)
                     Spacer()
+                    if !model.isCheckingImageConnection {
+                        Button(model.imageConnectionVerifiedAt == nil ? "Check Connection" : "Check Again") {
+                            connectionTask = Task { _ = await model.checkImageConnection() }
+                        }
+                    }
                     Button("Disconnect…") { showingRemoval = true }.disabled(model.isGenerating)
                 }
             }
@@ -58,6 +64,9 @@ struct ImageConnectionSettingsView: View {
             } else if configuration != model.settings.imageProvider {
                 Button("Save Changes", action: connect)
             }
+            if model.isCheckingImageConnection {
+                ProgressView("Checking API key…").controlSize(.small)
+            }
             if let message = error ?? model.keyRecoveryMessage {
                 Label(message, systemImage: "exclamationmark.circle").foregroundStyle(.red)
             }
@@ -67,9 +76,10 @@ struct ImageConnectionSettingsView: View {
             Text("Creating sends your picture and idea to \(model.imageProviderName). \(model.imageBillingNotice)")
                 .font(.caption)
         }
+        .disabled(model.isCheckingImageConnection)
         .onAppear { loadConfiguration() }
         .onChange(of: model.settings.imageProvider) { _, _ in loadConfiguration() }
-        .onDisappear { key = "" }
+        .onDisappear { connectionTask?.cancel(); key = "" }
         .alert("Disconnect \(model.imageProviderName)?", isPresented: $showingRemoval) {
             Button("Cancel", role: .cancel) {}
             Button("Disconnect", role: .destructive) {
@@ -92,8 +102,24 @@ struct ImageConnectionSettingsView: View {
         error = nil
     }
 
+    private var connectionLabel: String {
+        if model.imageConnectionVerifiedAt != nil { return "API key verified" }
+        return model.recovery == .apiKey ? "API key needs attention" : "API key saved"
+    }
+
+    private var connectionHelp: String {
+        guard let date = model.imageConnectionVerifiedAt else { return "Stored in Keychain. Check Connection verifies API access without creating an image." }
+        return "API authentication checked \(date.formatted(date: .abbreviated, time: .shortened)). Image permissions and available credit are checked when creating an image."
+    }
+
     private func connect() {
-        if model.saveImageConnection(configuration, key: key) { loadConfiguration() }
-        else { error = model.keyRecoveryMessage ?? model.detail }
+        guard !model.isCheckingImageConnection else { return }
+        let requestedConfiguration = configuration
+        let requestedKey = key
+        error = nil
+        connectionTask = Task {
+            if await model.saveImageConnection(requestedConfiguration, key: requestedKey) { loadConfiguration() }
+            else if !Task.isCancelled { error = model.keyRecoveryMessage }
+        }
     }
 }

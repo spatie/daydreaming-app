@@ -260,6 +260,11 @@ struct SettingsView: View {
                 LabeledContent("Today", value: model.usageCountLabel)
                     .foregroundStyle(.secondary)
             }
+            if let lastUpdated = model.lastUpdated {
+                Section("Your Desktop") {
+                    LabeledContent("Last Updated", value: lastUpdated.formatted(date: .abbreviated, time: .shortened))
+                }
+            }
         }
     }
 

@@ -11,16 +11,29 @@ final class AppModelHourlyTests: XCTestCase {
         fake.creationGate = AppHourlyGate()
         let model = fake.model()
         defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+        XCTAssertNil(model.lastImageGeneratedAt)
         let request = Task { await model.refreshIfNeeded(userInitiated: true) }
         await appEventually { fake.weatherCalls == 1 }
         XCTAssertEqual(model.menuUpdateStatus, "Checking local weather…")
         fake.weatherGate?.release()
         await request.value
         await appEventually { fake.created.count == 1 }
-        XCTAssertEqual(model.menuUpdateStatus, "Making your wallpaper…")
+        XCTAssertEqual(model.menuUpdateStatus, "Generating…")
+        XCTAssertTrue(model.hasMenuActivity)
         fake.creationGate?.release()
         await appEventually { fake.applied.count == 1 && !model.isGenerating }
         XCTAssertTrue(model.menuUpdateStatus?.hasPrefix("Wallpaper updated at ") == true)
+        XCTAssertFalse(model.hasMenuActivity)
+        XCTAssertEqual(model.lastImageGeneratedAt, fake.clock)
+        XCTAssertTrue(model.lastGenerationMenuLabel.hasPrefix("Last generated: "))
+        let generatedAt = model.lastImageGeneratedAt
+        fake.clock = fake.clock.addingTimeInterval(60)
+        await model.refreshIfNeeded(userInitiated: true)
+        XCTAssertEqual(fake.created.count, 1)
+        XCTAssertEqual(model.lastImageGeneratedAt, generatedAt)
+        let restored = fake.model()
+        defer { restored.stopBackgroundTasks() }
+        XCTAssertEqual(restored.lastImageGeneratedAt, generatedAt)
     }
 
     @MainActor
@@ -32,6 +45,7 @@ final class AppModelHourlyTests: XCTestCase {
         await model.refreshIfNeeded(userInitiated: true)
         await appEventually { fake.applied.count == 1 && !model.isGenerating }
         let desktop = model.displayedImageURL
+        let generatedAt = model.lastImageGeneratedAt
         fake.creationError = URLError(.notConnectedToInternet)
         await model.refreshIfNeeded(force: true, userInitiated: true)
         await appEventually { fake.created.count == 2 && !model.isGenerating }
@@ -41,6 +55,7 @@ final class AppModelHourlyTests: XCTestCase {
         XCTAssertEqual(model.recovery, .retry)
         XCTAssertTrue(model.detail.contains("retry automatically"))
         XCTAssertNil(model.presentation)
+        XCTAssertEqual(model.lastImageGeneratedAt, generatedAt)
     }
 
     @MainActor
@@ -167,7 +182,7 @@ final class AppModelHourlyTests: XCTestCase {
         fake.creationError = ImageClientError.invalidKey
         await model.refreshIfNeeded(force: true, userInitiated: true)
         await appEventually { model.activity == .failed && !model.isGenerating }
-        XCTAssertEqual(model.automaticUpdateStatus, "Updates blocked · replace API key")
+        XCTAssertEqual(model.automaticUpdateStatus, "Updates blocked · check Image AI in Settings")
         XCTAssertEqual(model.displayedImageURL, applied)
         XCTAssertEqual(model.lastUpdated, updated)
         XCTAssertEqual(fake.applied.count, 1)
@@ -516,6 +531,25 @@ final class AppModelHourlyTests: XCTestCase {
         await appEventually { fake.applied.count == 1 && !model.isGenerating }
         XCTAssertEqual(fake.created.count, 1)
         XCTAssertEqual(model.lastUpdated, fake.clock)
+    }
+
+    @MainActor
+    func testConfirmedWallpaperFinishesWithThePreviewWindowClosed() async throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        fake.settings.automaticUpdates = false
+        fake.previewWindowActive = false
+        let model = fake.model()
+        defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+        model.cancelPromptUpdate()
+        model.pictureChoiceWindowClosed()
+        model.backToNow()
+        await model.adoptDisplayedPictureAsWallpaper()
+        await appEventually { fake.applied.count == 1 && !model.isGenerating }
+        XCTAssertEqual(fake.created.count, 1)
+        XCTAssertEqual(fake.created.first?.renderProfile, .wallpaper)
+        XCTAssertEqual(fake.ledger.count(on: fake.clock), 1)
+        XCTAssertTrue(model.settings.automaticUpdates)
     }
 
     @MainActor

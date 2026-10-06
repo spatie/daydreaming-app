@@ -263,31 +263,6 @@ struct ContentView: View {
         .disabled(isCropping || model.isConfirmingPicture)
     }
 
-    private var workspaceWeatherRow: some View {
-        TimelineView(.periodic(from: .now, by: 60)) { timeline in
-            HStack(spacing: 8) {
-                Image(systemName: model.workspaceWeather?.symbol ?? "cloud")
-                    .foregroundStyle(.secondary).accessibilityHidden(true)
-                if let weather = model.workspaceWeather {
-                    Text("Weather now · \(weather.label.capitalized)")
-                        .foregroundStyle(.secondary).lineLimit(1)
-                } else {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Local weather unavailable").foregroundStyle(.secondary)
-                        Button("Allow Location…") {
-                            commitPrompt(generatesDraft: false)
-                            model.requestLocalWeatherAccess()
-                        }.buttonStyle(.borderless)
-                    }
-                }
-            }
-            .font(.caption)
-            .help("Weather data: MET Norway (CC BY 4.0), using your approximate location.")
-            .task(id: model.settings.weatherChoice) { await model.refreshWorkspaceWeather() }
-            .onChange(of: timeline.date) { _, _ in Task { await model.refreshWorkspaceWeather() } }
-        }
-    }
-
     private var previewWorkspace: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
@@ -304,7 +279,6 @@ struct ContentView: View {
                     }
                 }
                 Spacer()
-                if !isCropping { workspaceWeatherRow }
                 if hasPicture && !isCropping {
                     Button("Crop picture", systemImage: "crop") {
                         commitPrompt(generatesDraft: false)
@@ -597,6 +571,7 @@ struct ContentView: View {
         Button(AppCopy.usePictureAndIdeaAsWallpaper) {
             commitPrompt(force: true, generatesDraft: false)
             promptFocused = false
+            model.closeWallpaperWindow()
             Task { await model.adoptDisplayedPictureAsWallpaper() }
         }
         .keyboardShortcut(.return, modifiers: .command)

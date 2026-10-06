@@ -8,6 +8,26 @@ struct OpenAIImageClient: Sendable {
         self.transport = transport
     }
 
+    /// Authenticate without creating an image or uploading the user's picture.
+    func verifyCredential(_ credential: String, endpoint: URL = URL(string: "https://api.openai.com/v1/models")!) async throws {
+        try Task.checkCancellation()
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 20
+        request.setValue("Bearer \(credential)", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await transport(request)
+        try Task.checkCancellation()
+        guard let response = response as? HTTPURLResponse else { throw ImageClientError.invalidResponse }
+        switch response.statusCode {
+        case 200:
+            _ = try JSONDecoder().decode(APIModelList.self, from: data)
+        case 401: throw ImageClientError.invalidKey
+        case 403: throw ImageClientError.api("Allow read access to Models in your API key permissions to verify this connection.")
+        case 429: throw ImageClientError.api("The provider is busy. Try checking your key again shortly.")
+        default: throw ImageClientError.api("Couldn't verify the connection. Your key hasn't been saved. Try again shortly.")
+        }
+    }
+
     func edit(
         sourceURL: URL,
         prompt: String,
@@ -110,6 +130,11 @@ private final class ImageEditTransport: NSObject, URLSessionTaskDelegate, Sendab
     }
 }
 
+private struct APIModelList: Decodable {
+    struct Model: Decodable { let id: String }
+    let data: [Model]
+}
+
 private struct ImageEditResponse: Decodable {
     struct Item: Decodable {
         let b64JSON: String?
@@ -141,9 +166,9 @@ enum ImageClientError: LocalizedError {
         case .invalidResponse: "The image provider sent an invalid response."
         case .missingImage: "The image provider returned no image."
         case .api(let message): message
-        case .invalidKey: "OpenAI couldn't accept your API key. Replace it in Settings, then try again."
+        case .invalidKey: "OpenAI couldn't accept your API key. Open Image AI in Settings to check your connection."
         case .billing: "Check your OpenAI credit and billing limit before creating another image. Your current wallpaper stays in place."
-        case .unauthorized(let name): "\(name) couldn't accept your API key. Replace it in Settings, then try again."
+        case .unauthorized(let name): "\(name) couldn't accept your API key. Open Image AI in Settings to check your connection."
         case .creditUnavailable(let name): "Check your \(name) credit and billing limit. Your current wallpaper stays in place."
         }
     }

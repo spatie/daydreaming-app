@@ -55,6 +55,7 @@ struct ImageGenerationRequest: Sendable {
 protocol ImageGenerationDriver: Sendable {
     var descriptor: ImageDriverDescriptor { get }
     func validate(_ configuration: ImageProviderConfiguration) throws
+    func verifyCredential(_ credential: String, configuration: ImageProviderConfiguration) async throws
     func edit(_ request: ImageGenerationRequest, credential: String,
               willSend: @escaping @MainActor () async throws -> Void,
               didReject: @escaping @MainActor (Int) -> Void) async throws -> Data
@@ -90,6 +91,11 @@ struct OpenAIImageDriver: ImageGenerationDriver {
         guard configuration == .openAI else { throw ImageDriverError.invalidConfiguration }
     }
 
+    func verifyCredential(_ credential: String, configuration: ImageProviderConfiguration) async throws {
+        try validate(configuration)
+        try await client.verifyCredential(credential)
+    }
+
     func edit(_ request: ImageGenerationRequest, credential: String,
               willSend: @escaping @MainActor () async throws -> Void,
               didReject: @escaping @MainActor (Int) -> Void) async throws -> Data {
@@ -120,6 +126,13 @@ struct CompatibleImageDriver: ImageGenerationDriver {
               components.user == nil, components.password == nil, components.query == nil, components.fragment == nil,
               let url = components.url else { throw ImageDriverError.invalidEndpoint }
         return url.appendingPathComponent("images/edits")
+    }
+
+    func verifyCredential(_ credential: String, configuration: ImageProviderConfiguration) async throws {
+        try validate(configuration)
+        let endpoint = try Self.endpoint(for: configuration).deletingLastPathComponent()
+            .deletingLastPathComponent().appendingPathComponent("models")
+        try await client.verifyCredential(credential, endpoint: endpoint)
     }
 
     func edit(_ request: ImageGenerationRequest, credential: String,
