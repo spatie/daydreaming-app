@@ -7,6 +7,10 @@ final class AppModelHourlyTests: XCTestCase {
     func testChoosingYosemitePreviewsSourceWithoutClaimingDesktopWasChanged() async throws {
         let fake = try AppHourlyFake()
         defer { fake.removeFiles() }
+        let previous = fake.directory.appendingPathComponent("previous.jpg")
+        try Data("previous source".utf8).write(to: previous)
+        fake.settings.sourcePath = previous.path
+        fake.settings.sourceDigest = "previous-picture"
         let model = fake.model()
         defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
         await model.refreshIfNeeded(userInitiated: true)
