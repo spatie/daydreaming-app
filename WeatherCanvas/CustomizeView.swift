@@ -18,7 +18,7 @@ struct CustomizeView: View {
                     .help("Uses your approximate location to fetch the local forecast from MET Norway.")
             }
             .formStyle(.grouped)
-            Text("Links and files in your instructions are read before each new wallpaper and their text is sent to OpenAI.")
+            Text("Links and files in your instructions are read before each new wallpaper and their text is sent to \(model.imageProviderName).")
                 .font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 20)
@@ -29,7 +29,7 @@ struct CustomizeView: View {
                 Button("Done", action: save)
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)
-                    .help("Saves your style and makes a preview. New images use OpenAI credit.")
+                    .help("Saves your style and makes a preview. New images use \(model.imageCreditName).")
             }
             .padding(20)
         }

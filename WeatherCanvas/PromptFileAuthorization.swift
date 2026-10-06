@@ -99,7 +99,7 @@ final class PromptFileAuthorization {
         let url = URL(fileURLWithPath: path)
         let panel = NSOpenPanel()
         panel.title = "Allow Access to This File"
-        panel.message = "Daydreaming needs your permission to read \(url.lastPathComponent). Its text can be sent to OpenAI when creating your wallpaper."
+        panel.message = "Daydreaming needs your permission to read \(url.lastPathComponent). Its text can be sent to your selected image provider when creating your wallpaper."
         panel.prompt = "Allow Access"
         panel.canChooseFiles = true
         panel.canChooseDirectories = false

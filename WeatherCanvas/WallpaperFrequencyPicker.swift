@@ -61,7 +61,7 @@ struct WallpaperFrequencyPicker: View {
                         ForEach(FrequencyUnit.allCases) { Text($0.rawValue.capitalized).tag($0) }
                     }.labelsHidden().frame(width: 105)
                 }
-                Text("One minute to one month. Updates use OpenAI credit.")
+                Text("One minute to one month. Updates use \(model.imageCreditName).")
                     .font(.caption).foregroundStyle(.secondary)
                 HStack {
                     Button("Cancel", role: .cancel) { showingCustom = false }.keyboardShortcut(.cancelAction)
@@ -91,6 +91,6 @@ struct WallpaperFrequencyPicker: View {
         let timing = model.settings.interval == .twiceDaily
             ? "Updates around \(model.hourLabel(7)) and \(model.hourLabel(19)), in your local time. "
             : "How often your wallpaper updates after you use this picture and idea. "
-        return timing + "Frequent updates can use more OpenAI credit. Your daily image limit still applies."
+        return timing + "Frequent updates can use more \(model.imageCreditName). Your daily image limit still applies."
     }
 }

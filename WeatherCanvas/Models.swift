@@ -131,7 +131,7 @@ enum WallpaperRecovery {
         switch self {
         case .weather: "Choose Weather…"
         case .apiKey: "Replace API Key…"
-        case .billing: "Open OpenAI Billing"
+        case .billing: "Check Image Provider Billing"
         case .image: "Choose a Picture…"
         case .retry: "Try Again"
         }
