@@ -13,7 +13,7 @@ import subprocess
 import sys
 import tempfile
 from feed import FEED_URL, DOWNLOAD_PREFIX, require_next_build, validate
-from sparkle_tools import ACCOUNT, VERSION, SHA256, fetch
+from sparkle_tools import ACCOUNT, VERSION, SHA256, fetch, signing_arguments, public_key as public_key_from_file
 from dmg import build as build_dmg
 
 BUNDLE_ID = "be.spatie.daydreaming"
@@ -92,17 +92,22 @@ def notarize(path: Path, profile: str, log: Path):
 def prepare(args):
     repo = Path(__file__).resolve().parents[2]
     revision = clean_revision(repo)
-    require_next_build(repo / "appcast.xml", args.build)
+    signing = signing_arguments(args.sparkle_key_file)
+    if args.sparkle_key_file and repo in args.sparkle_key_file.resolve().parents:
+        raise ValueError("Private signing keys must stay outside the source tree")
+    previous_feed = (args.previous_feed or repo / "appcast.xml").resolve()
+    require_next_build(previous_feed, args.build)
     output = args.output.resolve()
     if output.exists():
         raise ValueError("Output directory already exists. Existing releases are immutable")
     if output == repo or repo in output.parents:
         raise ValueError("Output must be outside the source tree")
     notes = args.notes.resolve()
-    relative_notes = notes.relative_to(repo)
     if not notes.is_file():
-        raise ValueError("Release notes must be a committed file")
-    run("git", "ls-files", "--error-unmatch", str(relative_notes), cwd=repo, capture=True)
+        raise ValueError("Release notes file is missing")
+    if not args.generated_notes:
+        relative_notes = notes.relative_to(repo)
+        run("git", "ls-files", "--error-unmatch", str(relative_notes), cwd=repo, capture=True)
     output.mkdir(parents=True)
     marker = output / "RELEASE_INCOMPLETE"
     marker.write_text("Do not distribute this directory until preparation succeeds.\n")
@@ -118,7 +123,9 @@ def prepare(args):
         resolved = source / "Daydreaming.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
         if not resolved.is_file():
             raise ValueError("Commit the resolved Swift package lockfile before preparing a release")
-        require_next_build(source / "appcast.xml", args.build)
+        tools = fetch(work / "Sparkle")
+        run(tools / "sign_update", "--verify", *signing, previous_feed)
+        require_next_build(previous_feed, args.build)
         run("xcodegen", "generate", cwd=source)
         archive = work / "Daydreaming.xcarchive"
         run("xcodebuild", "-project", "Daydreaming.xcodeproj", "-scheme", "Daydreaming", "-configuration", "Release",
@@ -135,8 +142,9 @@ def prepare(args):
             "-exportOptionsPlist", export_options)
         app = exported / "Daydreaming.app"
         public_key = validate_app(app, args.version, args.build, revision)
-        tools = fetch(work / "Sparkle")
-        if run(tools / "generate_keys", "--account", ACCOUNT, "-p", capture=True) != public_key:
+        signing_public_key = (public_key_from_file(args.sparkle_key_file) if args.sparkle_key_file
+                              else run(tools / "generate_keys", "--account", ACCOUNT, "-p", capture=True))
+        if signing_public_key != public_key:
             raise ValueError("Daydreaming Keychain signing account does not match the committed public key")
         submission = work / "notarization.zip"
         run("ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", app, submission)
@@ -158,20 +166,20 @@ def prepare(args):
         feed_dir = work / "feed"
         feed_dir.mkdir()
         shutil.copy2(dmg_file, feed_dir / dmg_file.name)
-        shutil.copy2(source / "appcast.xml", feed_dir / "appcast.xml")
-        shutil.copy2(source / relative_notes, feed_dir / (dmg_file.stem + notes.suffix))
-        run(tools / "generate_appcast", "--account", ACCOUNT, "--download-url-prefix", DOWNLOAD_PREFIX,
+        shutil.copy2(previous_feed, feed_dir / "appcast.xml")
+        shutil.copy2(notes, feed_dir / (dmg_file.stem + notes.suffix))
+        run(tools / "generate_appcast", *signing, "--download-url-prefix", DOWNLOAD_PREFIX,
             "--embed-release-notes", "--maximum-versions", "0", "--maximum-deltas", "0", "--versions", str(args.build), feed_dir)
         feed = feed_dir / "appcast.xml"
         signature = validate(feed, dmg_file, args.version, args.build)
-        run(tools / "sign_update", "--verify", "--account", ACCOUNT, dmg_file, signature)
-        run(tools / "sign_update", "--verify", "--account", ACCOUNT, feed)
-        zip_signature_output = run(tools / "sign_update", "--account", ACCOUNT, zip_file, capture=True)
+        run(tools / "sign_update", "--verify", *signing, dmg_file, signature)
+        run(tools / "sign_update", "--verify", *signing, feed)
+        zip_signature_output = run(tools / "sign_update", *signing, zip_file, capture=True)
         match = re.search(r'sparkle:edSignature="([A-Za-z0-9+/=]+)" length="([0-9]+)"', zip_signature_output)
         if not match or int(match.group(2)) != zip_file.stat().st_size:
             raise ValueError("Official tool did not return a valid ZIP signature and length")
         zip_signature = match.group(1)
-        run(tools / "sign_update", "--verify", "--account", ACCOUNT, zip_file, zip_signature)
+        run(tools / "sign_update", "--verify", *signing, zip_file, zip_signature)
         # Copy the signed bytes verbatim. Modifying the feed after signing invalidates it.
         shutil.copy2(feed, output / "appcast.xml")
         for file in feed_dir.iterdir():
@@ -180,6 +188,9 @@ def prepare(args):
         checksums = {file.name: hashlib.sha256(file.read_bytes()).hexdigest()
                      for file in output.iterdir() if file.is_file() and file != marker}
         manifest = {"gitRevision": revision, "sourceArchiveSHA256": source_hash, "version": args.version,
+                    "releaseNotesSHA256": hashlib.sha256(notes.read_bytes()).hexdigest(),
+                    "generatedNotes": args.generated_notes,
+                    "previousFeedSHA256": hashlib.sha256(previous_feed.read_bytes()).hexdigest(),
                     "build": args.build, "bundleIdentifier": BUNDLE_ID, "teamIdentifier": TEAM,
                     "sparkleVersion": VERSION, "sparkleDistributionSHA256": SHA256, "feedURL": FEED_URL,
                     "publicKey": public_key, "archiveSignatures": {dmg_file.name: signature, zip_file.name: zip_signature},
@@ -197,6 +208,9 @@ def main():
     parser.add_argument("--identity", required=True, help="Explicit Daydreaming Developer ID Application identity")
     parser.add_argument("--notary-profile", required=True, help="Explicit existing notarytool Keychain profile")
     parser.add_argument("--notes", required=True, type=Path, help="Committed .md, .html or .txt release notes")
+    parser.add_argument("--generated-notes", action="store_true", help="Allow notes generated outside the committed tree")
+    parser.add_argument("--previous-feed", type=Path, help="Current live signed feed, verified before build")
+    parser.add_argument("--sparkle-key-file", type=Path, help="Optional owner-only CI key file, outside the repo")
     parser.add_argument("--output", required=True, type=Path, help="New staging directory outside this repository")
     args = parser.parse_args()
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", args.version) or args.build < 1:

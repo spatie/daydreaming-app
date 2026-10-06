@@ -1,5 +1,43 @@
 # Preparing a Daydreaming release
 
+## GitHub workflow
+
+Run **Release Daydreaming** from the Actions tab on `main`, or use:
+
+```sh
+gh workflow run release.yml --repo spatie/daydreaming-app --ref main -f version=0.1.0
+```
+
+The workflow tests the app under an isolated preview identifier on macOS 26, validates the workflow, then preflights every release credential before building the production archive. Actions are pinned by commit. It uses the selected immutable workflow commit, stamps the requested version and Git commit count as the build number, and refuses existing version tags or non-increasing feed builds. Release concurrency is serialized. It creates the private GitHub release and `vVERSION` tag after successful website publication. The native repository remains private.
+
+Release notes come automatically from `docs/releases/VERSION.md` when that entry exists. Otherwise they list real non-merge commit subjects since the previous successful release. Empty changes fail instead of producing invented notes. The HTML renderer escapes source text, and generated notes remove private commit/PR URLs. The same notes appear in the GitHub release and signed feed. Edit a maintained version entry before dispatch for editorial control.
+
+Configure these GitHub Actions secrets for this repository:
+
+| Secret | Purpose |
+| --- | --- |
+| `APPLE_CERTIFICATE_P12` | Base64 Spatie Developer ID Application certificate with its private key |
+| `APPLE_CERTIFICATE_PASSWORD` | Password for that certificate export |
+| `APPLE_API_KEY_P8` | Base64 Apple App Store Connect Team API key for notarization |
+| `APPLE_API_KEY_ID` | Apple API key ID |
+| `APPLE_API_ISSUER_ID` | Apple team issuer ID |
+| `DAYDREAMING_SPARKLE_PRIVATE_KEY` | Daydreaming's existing Sparkle 2.10 base64 private seed |
+| `DAYDREAMING_S3_ACCESS_KEY_ID` | Access key scoped to the Daydreaming artifact bucket/prefix |
+| `DAYDREAMING_S3_SECRET_ACCESS_KEY` | Secret for that object-storage key |
+| `DAYDREAMING_RELEASE_TOKEN` | Website token scoped to the artifact/appcast publication API |
+
+Configure repository variables `DAYDREAMING_S3_ENDPOINT` (HTTPS), `DAYDREAMING_S3_REGION`, `DAYDREAMING_S3_BUCKET`, `DAYDREAMING_S3_PREFIX` and `DAYDREAMING_OBJECT_BASE_URL`. The public object base URL includes the prefix and ends just before the filename. The bucket policy must allow public reads for release objects. Conditional `PutObject` with `If-None-Match: *` must be supported. An upload never replaces an existing object; an identical existing object is reused after full HTTP hash verification. Storage authorization failures are fatal, not treated as missing files.
+
+Provision credentials through the owner's approved secret-management process. The workflow never exports keys from the owner's Mac or substitutes Bloom's signing key. CI creates a temporary keychain for the Developer ID certificate and notarization profile. The Sparkle seed is an owner-only temporary file to avoid interactive Keychain prompts from the official CLI tools. Its public half is checked against the committed app key before building. Certificate, key files and keychain are cleaned up on success, failure and cancellation. The setup script refuses to run outside GitHub Actions.
+
+The current live feed is downloaded and cryptographically verified before building. The existing preparation pipeline notarizes and staples both app and DMG, and retains verified archives and the manifest as private workflow artifacts. Publication repeats signature, Gatekeeper and staple checks. It uploads versioned DMG/ZIP files to external object storage, verifies public bytes, registers metadata through `POST /api/releases/artifacts`, and verifies canonical site redirects. Only then does it POST exact signed XML to `/api/releases/appcast`. Live feed hashes must match. If the live feed changed since preparation, publication stops instead of overwriting another release.
+
+Public URLs remain `https://getdaydreaming.com/releases/Daydreaming-VERSION-BUILD.dmg` and `.zip`. The site redirects these to approved immutable external objects. `/download` and `/changelog` become active through the signed feed. There is no source-code publication in this workflow.
+
+For interrupted publication, download the verified workflow artifact and resume `scripts/release/publish.py` with that unchanged directory and configured credentials. Never rebuild and overwrite the same published filename. If the feed was already promoted, verify live hashes first and finish the private GitHub release using the manifest's source revision and the generated notes. A published version gets a new version and build for any correction.
+
+The first public release remains blocked until these credentials and external object storage are actually configured. A signed local design-preview DMG is not a notarized public release.
+
 Sparkle is pinned to [2.10.0](https://github.com/sparkle-project/Sparkle/releases/tag/2.10.0). The feed is `https://getdaydreaming.com/appcast.xml`. Production Release builds use the feed when their committed public key is valid. Debug, preview identifiers, hosted tests and local channels never start an updater. Automatic checks run once a day by default, without a first-run permission question, like Bloom. Sparkle owns the saved Settings preference, so opting out remains respected. Automatic checks remain separate from wallpaper refreshes.
 
 The unique signing account is `be.spatie.daydreaming.sparkle`. Its key was created specifically for Daydreaming. Never use Sparkle's default `ed25519` account or Bloom's signing key. The public key belongs in `DAYDREAMING_SPARKLE_PUBLIC_KEY` in `project.yml`. The private key stays in Keychain. Coordinate with the owner before creating, replacing or exporting a signing key.
