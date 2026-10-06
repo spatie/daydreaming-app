@@ -12,11 +12,11 @@ Use an existing explicitly named `notarytool` Keychain profile. The release tool
 
 ```sh
 python3 scripts/release/prepare.py \
-  --version 0.1.0 --build 2 \
+  --version 0.1.0 --build 3 \
   --identity 'Developer ID Application: Spatie (97KRXCRMAY)' \
   --notary-profile daydreaming-notary \
   --notes docs/releases/0.1.0.md \
-  --output /tmp/daydreaming-release-0.1.0-2
+  --output /tmp/daydreaming-release-0.1.0-3
 ```
 
 This command builds and submits the archives to Apple's notarization service. It does not publish, upload website files, create tags, push, commit, install or launch the app. It refuses dirty trees and existing output directories, and builds an isolated archive of the exact Git commit. XcodeGen and Xcode command line tools must already be installed. Dependency resolution uses the committed package lockfile.
