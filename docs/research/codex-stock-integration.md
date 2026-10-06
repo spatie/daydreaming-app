@@ -4,6 +4,16 @@ Reviewed October 6, 2026 against installed Codex 0.159.3 help, pristine 0.159.3 
 
 Stock Codex supports native image generation and editing. Its supported app-server surface does not provide the controls needed to make it a bounded Daydreaming image provider. Do not add it as a selectable image provider with promises of one approved edit per request.
 
+## Shipped manual handoff
+
+Daydreaming offers **Create in Codex…** as an explicit manual action. It exports the currently chosen, cropped source picture as an orientation-corrected PNG without its original EXIF metadata, alongside the supplied instructions, in a new folder selected by the user. It opens the stock desktop app with a [supported new-chat link](https://learn.chatgpt.com/docs/reference/commands#chats), containing that folder's absolute path and the instructions as composer text. The user reviews and sends the message in Codex. Opening the chat does not send it or start generation.
+
+This route does not bundle or compile Codex, read credentials, invoke an agent process, change the wallpaper, create a queue job, or use the Daydreaming image ledger. Sending in Codex uses that app's own account and usage limits. The request asks for one reference edit, but this is a prompt, not a technical call limit. Stock Codex retains its own tools and permissions. There is no automated import or background Codex schedule. Daydreaming's automatic previews and wallpaper updates continue to use the OpenAI Images API.
+
+The exported folder is intentionally retained as a user-owned exchange folder. If the desktop app is unavailable, Daydreaming provides an installation help link and performs no export. If opening fails after export, the files remain available for the user. Returning a result through Daydreaming's ordinary picture chooser adopts it as a new source picture and follows that chooser's normal preview behavior.
+
+Offline tests cover exact URL query encoding without automatic-send parameters, export contents and metadata, preservation of the source, use of the approved crop and failure cleanup. They do not prove a live Codex edit, because no signed-in or paid call was performed.
+
 ## Two different routes
 
 The [Sign in with ChatGPT preview limitations](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations) exclude image-generation tools for ChatGPT plan usage through `api.openai.com/v1`, including app-server configured for that route. Image inputs remain supported. That restriction does not establish that native Codex image generation is unavailable.

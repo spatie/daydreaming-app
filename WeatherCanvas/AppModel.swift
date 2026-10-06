@@ -693,6 +693,31 @@ final class AppModel: ObservableObject {
         return hourCache?.entries.first { hourCache?.url(for: $0) == url }
     }
 
+    /// Describes the actual file on the canvas, independently of the requested slider hour.
+    var shownPictureDescription: String? {
+        guard let entry = currentSavedWallpaperEntry,
+              [.ready, .onDesktop, .stale].contains(previewPresentation.state) else { return nil }
+        return "Image for \(hourLabel(entry.hour)) · \(entry.weather.label.capitalized)"
+    }
+
+    var shownPictureCreationDescription: String? {
+        guard shownPictureDescription != nil, let entry = currentSavedWallpaperEntry else { return nil }
+        return "Made \(entry.createdAt.formatted(date: .abbreviated, time: .shortened))"
+    }
+
+    var shownPictureAccessibilityDescription: String {
+        if let description = shownPictureDescription {
+            return [description, shownPictureCreationDescription].compactMap { $0 }.joined(separator: ". ")
+        }
+        let presentation = previewPresentation
+        if canvasImageURL == sourceImageURL || canvasImageURL == uncroppedImageURL {
+            return "Original picture. \(presentation.headline)"
+        }
+        return presentation.resultURL == nil
+            ? "Previous desktop image while waiting. \(presentation.headline)"
+            : presentation.headline
+    }
+
     var isCurrentRecipeAdopted: Bool {
         guard settings.automaticUpdates, !hasUnadoptedPicture, let displayedImageURL,
               let snapshot = hourCache?.entries.first(where: { hourCache?.url(for: $0) == displayedImageURL })?.settingsSnapshot else { return false }
@@ -715,7 +740,7 @@ final class AppModel: ObservableObject {
         guard lastUpdated != nil, let displayedImageURL else { return nil }
         if let entry = hourCache?.entries.first(where: { hourCache?.url(for: $0) == displayedImageURL }) {
             let name = entry.settingsSnapshot?.pictureName ?? "Saved wallpaper"
-            return "On desktop: \(name) · \(hourLabel(entry.hour))"
+            return "On desktop: \(name) · image for \(hourLabel(entry.hour))"
         }
         if displayedImageURL == sourceImageURL || displayedImageURL == uncroppedImageURL {
             return "On desktop: \(sourceImageName) · original"
@@ -730,6 +755,41 @@ final class AppModel: ObservableObject {
         if remainingGenerations == 0 { return "Daily image limit reached" }
         if isMakingCurrentWallpaper || isAdoptingWallpaper { return "Updating your wallpaper…" }
         return "Automatic updates on · next \(nextWallpaperTime)"
+    }
+
+    @Published private(set) var isPreparingCodexHandoff = false
+
+    var codexHandoffRequest: CodexHandoff.Request? {
+        guard presentation != .crop, stagedPictureURL == nil, !isImportingPicture,
+              !isPreparingForAppUpdate, let sourceImageURL else { return nil }
+        let hour = selectedPreviewHour ?? Calendar.current.component(.hour, from: pipelineNow)
+        let isNow = hour == Calendar.current.component(.hour, from: pipelineNow)
+        let savedWeather = currentSavedWallpaperEntry.flatMap { $0.hour == hour ? $0.weather.label : nil }
+        let weather = previewForecasts[hour]?.label ?? (isNow ? workspaceWeather?.label : nil)
+            ?? savedWeather ?? "local weather unavailable"
+        let idea = pendingPromptDraftText ?? settings.promptTemplate
+        let instructions = PromptRenderer.renderHour(idea, date: hourDate(hour), weather: weather, style: settings.style)
+        return CodexHandoff.Request(sourceURL: sourceImageURL, instructions: instructions)
+    }
+
+    func createInCodex() async {
+        guard !isPreparingCodexHandoff, let request = codexHandoffRequest else { return }
+        isPreparingCodexHandoff = true
+        defer { isPreparingCodexHandoff = false }
+        do {
+            _ = try await CodexHandoff.chooseFolderAndOpen(request)
+        } catch is CancellationError {
+            return
+        } catch {
+            let alert = NSAlert()
+            alert.messageText = "Couldn’t open Codex"
+            alert.informativeText = error.localizedDescription
+            alert.addButton(withTitle: "OK")
+            if !CodexHandoff.isAvailable { alert.addButton(withTitle: "Get Codex…") }
+            if alert.runModal() == .alertSecondButtonReturn {
+                NSWorkspace.shared.open(CodexHandoff.installationURL)
+            }
+        }
     }
 
     var visibleWallpaperPrompt: String? { currentSavedWallpaperEntry?.settingsSnapshot?.promptTemplate }

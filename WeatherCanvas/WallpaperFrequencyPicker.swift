@@ -32,7 +32,7 @@ struct WallpaperFrequencyPicker: View {
                     .help("Morning and evening, in your local time.")
             }
             Text(model.automaticUpdateStatus)
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.caption.weight(.medium)).foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
             if let desktop = model.desktopPictureDescription {
                 Text(desktop)
@@ -40,7 +40,7 @@ struct WallpaperFrequencyPicker: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             if let lastUpdated = model.lastUpdated {
-                Text("Desktop changed \(lastUpdated.formatted(date: .abbreviated, time: .shortened))")
+                Text("Applied to desktop \(lastUpdated.formatted(date: .abbreviated, time: .shortened))")
                     .font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .help("The last time Daydreaming successfully changed your desktop wallpaper. Making a preview does not change this time.")

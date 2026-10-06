@@ -266,7 +266,7 @@ struct ContentView: View {
                 Image(systemName: model.workspaceWeather?.symbol ?? "cloud")
                     .foregroundStyle(.secondary).accessibilityHidden(true)
                 if let weather = model.workspaceWeather {
-                    Text("Now · \(weather.label.capitalized)")
+                    Text("Weather now · \(weather.label.capitalized)")
                         .foregroundStyle(.secondary).lineLimit(1)
                 } else {
                     VStack(alignment: .leading, spacing: 2) {
@@ -291,9 +291,13 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     if isCropping { Text("Crop your original").font(.headline) }
                     else { CreationStepHeading(number: 4, title: "Preview") }
-                    if let caption = model.savedVariationCaption, !isCropping {
-                        Text(caption).font(.caption).foregroundStyle(.secondary)
-                            .lineLimit(2)
+                    if !isCropping {
+                        if let caption = model.savedVariationCaption ?? model.shownPictureDescription {
+                            Text(caption).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                        }
+                        if let made = model.shownPictureCreationDescription {
+                            Text(made).font(.caption2).foregroundStyle(.secondary)
+                        }
                     }
                 }
                 Spacer()
@@ -336,7 +340,7 @@ struct ContentView: View {
                             Spacer()
                         }
                         Text(AppCopy.previewTimeNotice)
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.caption).foregroundStyle(.primary)
                             .fixedSize(horizontal: false, vertical: true)
                         timeSlider(now: timeline.date)
                     }
@@ -388,7 +392,7 @@ struct ContentView: View {
                 enabled: !isCropping && model.stagedPictureURL == nil && !model.savedVariationsForSelectedPicture.isEmpty,
                 onStep: { model.browseSavedVariation(direction: $0) }))
             .help("Scroll up or down over the preview to browse saved variations of this picture.")
-            .accessibilityValue(model.savedVariationCaption ?? sliderAccessibilityValue)
+            .accessibilityValue(model.shownPictureAccessibilityDescription)
             .accessibilityAdjustableAction { direction in
                 model.browseSavedVariation(direction: direction == .increment ? 1 : -1)
             }
@@ -493,7 +497,7 @@ struct ContentView: View {
                     if !promptFocused && model.stagedPictureURL == nil { promptDraft = PromptRenderer.editableText(prompt) }
                 }
                 .accessibilityLabel("Your idea")
-                .accessibilityHint("Describe how your picture should change. Pausing creates a preview using OpenAI credit. \(AppCopy.usePictureAndIdeaAsWallpaper) starts automatic updates.")
+                .accessibilityHint("Describe how your picture should change. When you stop typing, a preview is created using OpenAI credit. \(AppCopy.usePictureAndIdeaAsWallpaper) starts automatic updates.")
                 .dropDestination(for: URL.self) { urls, _ in
                     guard !isCropping, model.stagedPictureURL == nil, let file = urls.first else { return false }
                     if UTType(filenameExtension: file.pathExtension)?.conforms(to: .image) == true {
@@ -508,7 +512,7 @@ struct ContentView: View {
                     return true
                 }
             Text(AppCopy.ideaPreviewNotice)
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.caption).foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -706,13 +710,28 @@ struct ContentView: View {
             let hour = model.selectedPreviewHour ?? Calendar.current.component(.hour, from: .now)
             return "\(model.hourLabel(hour)), live preview time. Change it to return to live preview."
         }
-        let state = model.previewPresentation.state == .creating ? "creating"
-            : model.previewPresentation.resultURL != nil ? "preview ready" : "no picture yet"
+        let presentation = model.previewPresentation
+        let state: String
+        if presentation.state == .onDesktop,
+           model.currentSavedWallpaperEntry?.hour != displayedHour {
+            state = "showing the existing desktop image"
+        } else {
+            switch presentation.state {
+            case .creating: state = "creating"
+            case .preparing: state = "preparing"
+            case .queued: state = "queued"
+            case .stale: state = "saved image, awaiting an updated preview"
+            case .ready: state = "preview ready"
+            case .onDesktop: state = "showing the desktop image"
+            case .original: state = "showing the original picture"
+            case .missing: state = "no preview yet"
+            }
+        }
         return "\(model.hourLabel(displayedHour)), \(model.selectedPreviewHour == nil ? "Now, " : "")\(state)"
     }
 
     private var previewAccessibilityLabel: String {
-        (model.selectedSavedWallpaper == nil ? "Preview" : "Saved variation") + " for \(model.hourLabel(displayedHour))" + (model.previewPresentation.resultURL == nil ? ", original picture while waiting" : "")
+        model.selectedSavedWallpaper == nil ? "Picture preview" : "Saved variation"
     }
 
     private func selectHour(_ hour: Int) {

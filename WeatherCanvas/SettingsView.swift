@@ -71,6 +71,14 @@ struct SettingsView: View {
                     .help("Reports a random installation ID, app version and macOS version. Pictures, ideas and API keys are never included.")
             }
 
+            Section("Codex") {
+                Button("Create in Codex…") { Task { await model.createInCodex() } }
+                    .disabled(model.codexHandoffRequest == nil || model.isPreparingCodexHandoff)
+                    .help("Opens your picture and idea in Codex for you to review and send. Nothing is generated here.")
+                Text("Create a variation in the Codex app. You review and send the request there. Automatic wallpaper updates use the OpenAI API.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
             Section("OpenAI API Key") {
                 if let message = model.keyRecoveryMessage { inlineError(message) }
                 if model.hasSavedKey {

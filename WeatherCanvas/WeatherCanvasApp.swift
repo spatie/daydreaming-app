@@ -63,6 +63,9 @@ private struct DaydreamingCommands: Commands {
                 .disabled(model.presentation == .crop || !model.onboardingComplete)
             Button("Previous Pictures…") { model.openSavedWallpapers() }
                 .disabled(model.presentation == .crop || !model.onboardingComplete)
+            Button("Create in Codex…") { Task { await model.createInCodex() } }
+                .disabled(model.codexHandoffRequest == nil || model.isPreparingCodexHandoff)
+                .help("Review and send your picture and idea in the Codex app. Automatic updates still use the OpenAI API.")
             Button("Crop Picture…") { present(.crop) }
                 .disabled(model.presentation == .crop || !model.onboardingComplete || model.uncroppedImageURL == nil)
             Divider()

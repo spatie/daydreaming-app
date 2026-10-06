@@ -1010,6 +1010,58 @@ final class AppModelHourlyTests: XCTestCase {
     }
 
     @MainActor
+    func testCodexHandoffPreparesSelectedOriginalAndIdeaWithoutSpending() throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        let model = fake.model()
+        defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+        let settings = model.settings
+        model.savePrompt("Warm watercolor", generatesDraft: false)
+        model.setPreviewHour(18)
+        let request = try XCTUnwrap(model.codexHandoffRequest)
+        XCTAssertEqual(request.sourceURL, fake.source)
+        XCTAssertTrue(request.instructions.contains("Warm watercolor"))
+        XCTAssertTrue(request.instructions.contains(model.hourLabel(18)))
+        XCTAssertTrue(fake.created.isEmpty)
+        XCTAssertTrue(fake.applied.isEmpty)
+        XCTAssertEqual(fake.ledger.count(on: fake.clock), 0)
+        XCTAssertEqual(model.settings.automaticUpdates, settings.automaticUpdates)
+        model.presentation = .crop
+        XCTAssertNil(model.codexHandoffRequest)
+        model.presentation = nil
+        model.stagePicture(fake.source)
+        XCTAssertNil(model.codexHandoffRequest)
+    }
+
+    @MainActor
+    func testCanvasDescribesActualOldDesktopImageInsteadOfRequestedNowHour() async throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        let model = fake.model()
+        defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+        await model.refreshIfNeeded(userInitiated: true)
+        await appEventually { fake.applied.count == 1 && !model.isGenerating }
+        let created = try XCTUnwrap(model.currentSavedWallpaperEntry)
+        let applied = model.lastUpdated
+        fake.clock = fake.clock.addingTimeInterval(7 * 3600)
+        model.backToNow()
+        XCTAssertEqual(model.previewPresentation.requestedHour, 21)
+        XCTAssertEqual(model.previewPresentation.state, .onDesktop)
+        XCTAssertEqual(model.currentSavedWallpaperEntry?.hour, 14)
+        XCTAssertEqual(model.shownPictureDescription, "Image for \(model.hourLabel(14)) · Clear")
+        XCTAssertTrue(model.shownPictureCreationDescription?.contains(created.createdAt.formatted(date: .abbreviated, time: .shortened)) == true)
+        XCTAssertTrue(model.desktopPictureDescription?.contains("image for \(model.hourLabel(14))") == true)
+        XCTAssertFalse(model.shownPictureAccessibilityDescription.contains(model.hourLabel(21)))
+        XCTAssertEqual(model.lastUpdated, applied)
+        XCTAssertEqual(fake.created.count, 1)
+        XCTAssertEqual(fake.applied.count, 1)
+        model.setPreviewHour(18)
+        XCTAssertNil(model.shownPictureDescription)
+        XCTAssertNil(model.shownPictureCreationDescription)
+        XCTAssertEqual(fake.created.count, 1)
+    }
+
+    @MainActor
     func testDesktopStatusOnlyBecomesAdoptedAfterFullWallpaperApplies() async throws {
         let fake = try AppHourlyFake()
         defer { fake.removeFiles() }
