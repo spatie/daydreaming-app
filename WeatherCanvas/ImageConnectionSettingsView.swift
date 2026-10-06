@@ -33,23 +33,26 @@ struct ImageConnectionSettingsView: View {
 
             if model.hasImageConnection {
                 HStack {
-                    Label("\(model.imageProviderName) connected", systemImage: "checkmark.circle")
+                    Label(model.recovery == .apiKey ? "API key needs attention" : "\(model.imageProviderName) API key saved",
+                          systemImage: model.recovery == .apiKey ? "exclamationmark.circle" : "checkmark.circle")
+                        .help("Your API key is stored in Keychain.")
                     Spacer()
                     Button("Disconnect…") { showingRemoval = true }.disabled(model.isGenerating)
                 }
             }
-            SecureField(model.hasSavedKey ? "Replacement API key (optional)" : "API key", text: $key)
-                .onSubmit { connect() }
-            HStack {
-                Text("Stored in Keychain.").font(.caption).foregroundStyle(.secondary)
-                Spacer()
-                if let url = model.imageProviderDescriptor?.manageKeysURL {
-                    Link("Get an API Key", destination: url)
+            if needsCredential {
+                SecureField("API key", text: $key)
+                    .onSubmit { connect() }
+                HStack {
+                    if let url = model.imageProviderDescriptor?.manageKeysURL {
+                        Link("Get an API Key", destination: url)
+                    }
+                    Spacer()
+                    Button("Connect", action: connect)
+                        .disabled(key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
-                Button(model.hasImageConnection ? "Save Connection" : "Connect", action: connect)
-                    .disabled(key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                              && (!model.hasSavedKey || configuration.credentialID != model.settings.imageProvider.credentialID
-                                  || configuration == model.settings.imageProvider))
+            } else if configuration != model.settings.imageProvider {
+                Button("Save Changes", action: connect)
             }
             if let message = error ?? model.keyRecoveryMessage {
                 Label(message, systemImage: "exclamationmark.circle").foregroundStyle(.red)
@@ -73,6 +76,10 @@ struct ImageConnectionSettingsView: View {
         } message: {
             Text("Removes this connection's API key and pauses updates. Your wallpaper, original pictures and saved images stay on this Mac.")
         }
+    }
+
+    private var needsCredential: Bool {
+        !model.hasSavedKey || configuration.credentialID != model.settings.imageProvider.credentialID
     }
 
     private func loadConfiguration() {
