@@ -3,10 +3,16 @@ import Foundation
 import ImageIO
 import UniformTypeIdentifiers
 
-struct ImportedImage {
+struct ImportedImage: Sendable {
     let originalURL: URL
     let uploadURL: URL
     let digest: String
+}
+
+struct ImageOutputDimensions: Equatable, Sendable {
+    let width: Int
+    let height: Int
+    var size: String { "\(width)x\(height)" }
 }
 
 enum ImageStore {
@@ -22,29 +28,95 @@ enum ImageStore {
         return normalized.hasPrefix(root.standardizedFileURL.path + "/")
     }
 
-    static func importImage(from selectedURL: URL) throws -> ImportedImage {
-        let directory = root.appendingPathComponent("Sources", isDirectory: true)
+    static func importImage(from selectedURL: URL, storageRoot: URL? = nil) throws -> ImportedImage {
+        try Task.checkCancellation()
+        let directory = (storageRoot ?? root).appendingPathComponent("Sources", isDirectory: true)
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
         let fileExtension = selectedURL.pathExtension.isEmpty ? "jpg" : selectedURL.pathExtension.lowercased()
         let originalURL = directory.appendingPathComponent("original.\(fileExtension)")
-        try FileManager.default.copyItem(at: selectedURL, to: originalURL)
-
-        let originalData = try Data(contentsOf: originalURL)
-        let digest = SHA256.hash(data: originalData).map { String(format: "%02x", $0) }.joined()
-        let uploadURL = directory.appendingPathComponent("upload.jpg")
-        try makeUploadImage(from: originalURL, to: uploadURL)
-
-        return ImportedImage(originalURL: originalURL, uploadURL: uploadURL, digest: digest)
+        do {
+            // Copy validated bytes, never an external symlink that could break the saved original later.
+            let originalData = try Data(contentsOf: selectedURL)
+            guard CGImageSourceCreateWithData(originalData as CFData, nil) != nil else { throw ImageStoreError.unreadableImage }
+            try originalData.write(to: originalURL, options: .atomic)
+            try Task.checkCancellation()
+            let digest = SHA256.hash(data: originalData).map { String(format: "%02x", $0) }.joined()
+            let uploadURL = directory.appendingPathComponent("upload.jpg")
+            try makeUploadImage(from: originalURL, to: uploadURL)
+            try Task.checkCancellation()
+            return ImportedImage(originalURL: originalURL, uploadURL: uploadURL, digest: digest)
+        } catch {
+            try? FileManager.default.removeItem(at: directory)
+            throw error
+        }
     }
 
-    static func uploadURL(for sourcePath: String) -> URL {
-        URL(fileURLWithPath: sourcePath).deletingLastPathComponent().appendingPathComponent("upload.jpg")
+    /// Keep file access alive in the worker, even if the caller cancels during decoding.
+    static func importImageInBackground(from selectedURL: URL, storageRoot: URL? = nil) async throws -> ImportedImage {
+        try Task.checkCancellation()
+        let worker = Task.detached(priority: .userInitiated) {
+            let access = selectedURL.startAccessingSecurityScopedResource()
+            defer { if access { selectedURL.stopAccessingSecurityScopedResource() } }
+            return try importImage(from: selectedURL, storageRoot: storageRoot)
+        }
+        return try await withTaskCancellationHandler {
+            let imported = try await worker.value
+            if Task.isCancelled {
+                try? FileManager.default.removeItem(at: imported.originalURL.deletingLastPathComponent())
+                throw CancellationError()
+            }
+            return imported
+        } onCancel: { worker.cancel() }
     }
 
-    static func outputSize(for sourcePath: String) throws -> String {
-        let url = uploadURL(for: sourcePath)
+    /// Decode and crop off the main actor. The selected picture is never overwritten.
+    static func cropImage(from selectedURL: URL, crop: PictureCrop, storageRoot: URL? = nil) throws -> ImportedImage {
+        let image = try orientedImage(from: selectedURL, maximumPixelSize: 8_192)
+        guard let cropped = image.cropping(to: crop.pixelRect(width: image.width, height: image.height)) else {
+            throw ImageStoreError.unreadableImage
+        }
+        let directory = (storageRoot ?? root).appendingPathComponent("Sources", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        do {
+            let originalURL = directory.appendingPathComponent("original.png")
+            guard let destination = CGImageDestinationCreateWithURL(originalURL as CFURL, UTType.png.identifier as CFString, 1, nil) else {
+                throw ImageStoreError.unreadableImage
+            }
+            CGImageDestinationAddImage(destination, cropped, nil)
+            guard CGImageDestinationFinalize(destination) else { throw ImageStoreError.unreadableImage }
+            let digest = SHA256.hash(data: try Data(contentsOf: originalURL)).map { String(format: "%02x", $0) }.joined()
+            let uploadURL = directory.appendingPathComponent("upload.jpg")
+            try makeUploadImage(from: originalURL, to: uploadURL)
+            return ImportedImage(originalURL: originalURL, uploadURL: uploadURL, digest: digest)
+        } catch {
+            try? FileManager.default.removeItem(at: directory)
+            throw error
+        }
+    }
+
+    static func orientedImage(from url: URL, maximumPixelSize: Int = 1_600) throws -> CGImage {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceThumbnailMaxPixelSize: maximumPixelSize,
+              ] as CFDictionary) else { throw ImageStoreError.unreadableImage }
+        return image
+    }
+
+    static func uploadURL(for sourcePath: String, renderProfile: GenerationRenderProfile = .wallpaper) -> URL {
+        URL(fileURLWithPath: sourcePath).deletingLastPathComponent()
+            .appendingPathComponent(renderProfile == .quickPreview ? "preview-upload-\(renderProfile.maximumInputPixelSize).jpg" : "upload.jpg")
+    }
+
+    static func outputSize(for sourcePath: String, renderProfile: GenerationRenderProfile = .wallpaper) throws -> String {
+        let url = uploadURL(for: sourcePath, renderProfile: renderProfile)
+        if renderProfile == .quickPreview, !FileManager.default.fileExists(atPath: url.path) {
+            try makeUploadImage(from: uploadURL(for: sourcePath), to: url, maximumPixelSize: renderProfile.maximumInputPixelSize)
+        }
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
               let width = properties[kCGImagePropertyPixelWidth] as? Int,
@@ -52,47 +124,36 @@ enum ImageStore {
             throw ImageStoreError.unreadableImage
         }
 
+        return try outputDimensions(width: width, height: height, renderProfile: renderProfile).size
+    }
+
+    static func outputDimensions(width: Int, height: Int, renderProfile: GenerationRenderProfile = .wallpaper) throws -> ImageOutputDimensions {
+        guard width > 0, height > 0 else { throw ImageStoreError.unreadableImage }
+        if renderProfile == .quickPreview {
+            let ratio = min(3, max(1.0 / 3, Double(width) / Double(height)))
+            let longToShort = max(ratio, 1 / ratio)
+            var longEdge = Int(ceil(sqrt(655_360 * longToShort) / 16)) * 16
+            while true {
+                let shortEdge = max(16, Int((Double(longEdge) / longToShort / 16).rounded()) * 16)
+                let actualRatio = Double(longEdge) / Double(shortEdge)
+                if longEdge * shortEdge >= 655_360, actualRatio <= 3 {
+                    return width >= height ? ImageOutputDimensions(width: longEdge, height: shortEdge)
+                        : ImageOutputDimensions(width: shortEdge, height: longEdge)
+                }
+                longEdge += 16
+            }
+        }
         let longEdge = 2_560.0
         let scale = longEdge / Double(max(width, height))
         let outputWidth = max(864, Int((Double(width) * scale / 16).rounded()) * 16)
         let outputHeight = max(864, Int((Double(height) * scale / 16).rounded()) * 16)
 
-        return "\(outputWidth)x\(outputHeight)"
+        return ImageOutputDimensions(width: outputWidth, height: outputHeight)
     }
 
     static func cacheURL(for key: String) throws -> URL {
         try FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
         return cacheDirectory.appendingPathComponent("\(key).png")
-    }
-
-    static func cacheKey(
-        settings: CanvasSettings,
-        context: RenderContext,
-        renderedPrompt: String,
-        size: String,
-        forceFresh: Bool
-    ) -> String {
-        var parts = [
-            settings.sourceDigest ?? "",
-            renderedPrompt,
-            settings.model.rawValue,
-            settings.quality.rawValue,
-            size,
-            context.weather,
-            String(context.intervalMinutes),
-            String(context.slot),
-        ]
-
-        if !settings.reuseMatchingImages {
-            parts.append(context.localDay)
-        }
-
-        if forceFresh {
-            parts.append(UUID().uuidString)
-        }
-
-        let data = Data(parts.joined(separator: "\u{0}").utf8)
-        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
     static func cacheSize() -> Int64 {
@@ -114,7 +175,7 @@ enum ImageStore {
         }
     }
 
-    private static func makeUploadImage(from originalURL: URL, to destinationURL: URL) throws {
+    private static func makeUploadImage(from originalURL: URL, to destinationURL: URL, maximumPixelSize: Int = 2_560) throws {
         guard let source = CGImageSourceCreateWithURL(originalURL as CFURL, nil) else {
             throw ImageStoreError.unreadableImage
         }
@@ -122,7 +183,7 @@ enum ImageStore {
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
             kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceThumbnailMaxPixelSize: 2_560,
+            kCGImageSourceThumbnailMaxPixelSize: maximumPixelSize,
         ]
 
         guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary),
@@ -149,6 +210,12 @@ enum ImageStore {
 
 enum ImageStoreError: LocalizedError {
     case unreadableImage
+    case originalRequiredForCacheClear
 
-    var errorDescription: String? { "This image could not be read. Try a JPEG, PNG, or HEIC file." }
+    var errorDescription: String? {
+        switch self {
+        case .unreadableImage: "This image could not be read. Try a JPEG, PNG, or HEIC file."
+        case .originalRequiredForCacheClear: "Choose your original picture again before clearing images. Your current wallpaper has been kept."
+        }
+    }
 }

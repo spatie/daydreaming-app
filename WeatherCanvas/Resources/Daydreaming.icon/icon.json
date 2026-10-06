@@ -1,0 +1,378 @@
+{
+  "fill-specializations": [
+    {
+      "value": {
+        "linear-gradient": [
+          "srgb:1.00000,0.84706,0.30196,1.00000",
+          "srgb:1.00000,0.76078,0.16078,1.00000"
+        ],
+        "orientation": {
+          "start": {
+            "x": 0.5,
+            "y": 0.0
+          },
+          "stop": {
+            "x": 0.5,
+            "y": 0.3
+          }
+        }
+      }
+    },
+    {
+      "appearance": "dark",
+      "value": {
+        "linear-gradient": [
+          "srgb:0.94902,0.66275,0.13333,1.00000",
+          "srgb:0.87843,0.54118,0.10980,1.00000"
+        ],
+        "orientation": {
+          "start": {
+            "x": 0.5,
+            "y": 0.0
+          },
+          "stop": {
+            "x": 0.5,
+            "y": 0.3
+          }
+        }
+      }
+    },
+    {
+      "appearance": "tinted",
+      "value": {
+        "linear-gradient": [
+          "srgb:1.00000,1.00000,1.00000,1.00000",
+          "srgb:0.94902,0.94902,0.94902,1.00000"
+        ],
+        "orientation": {
+          "start": {
+            "x": 0.5,
+            "y": 0.0
+          },
+          "stop": {
+            "x": 0.5,
+            "y": 0.3
+          }
+        }
+      }
+    }
+  ],
+  "groups": [
+    {
+      "name": "Land 4",
+      "layers": [
+        {
+          "image-name": "1-land-4.svg",
+          "name": "Land 4",
+          "fill-specializations": [
+            {
+              "value": {
+                "linear-gradient": [
+                  "srgb:0.30980,0.41961,1.00000,1.00000",
+                  "srgb:0.14118,0.21961,0.81569,1.00000"
+                ],
+                "orientation": {
+                  "start": {
+                    "x": 0.5,
+                    "y": 0.748740234375
+                  },
+                  "stop": {
+                    "x": 0.5,
+                    "y": 1.0
+                  }
+                }
+              }
+            },
+            {
+              "appearance": "dark",
+              "value": {
+                "linear-gradient": [
+                  "srgb:0.20784,0.31373,0.90196,1.00000",
+                  "srgb:0.10980,0.16471,0.65098,1.00000"
+                ],
+                "orientation": {
+                  "start": {
+                    "x": 0.5,
+                    "y": 0.748740234375
+                  },
+                  "stop": {
+                    "x": 0.5,
+                    "y": 1.0
+                  }
+                }
+              }
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "linear-gradient": [
+                  "srgb:0.42353,0.42353,0.42353,1.00000",
+                  "srgb:0.38431,0.38431,0.38431,1.00000"
+                ],
+                "orientation": {
+                  "start": {
+                    "x": 0.5,
+                    "y": 0.748740234375
+                  },
+                  "stop": {
+                    "x": 0.5,
+                    "y": 1.0
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "specular": true,
+      "shadow": {
+        "kind": "layer-color",
+        "opacity": 0.9
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.0
+      },
+      "specular-highlight-placement": "inside"
+    },
+    {
+      "name": "Land 3",
+      "layers": [
+        {
+          "image-name": "2-land-3.svg",
+          "name": "Land 3",
+          "fill-specializations": [
+            {
+              "value": {
+                "linear-gradient": [
+                  "srgb:0.82353,0.22353,0.56078,1.00000",
+                  "srgb:0.60784,0.20000,0.70980,1.00000"
+                ],
+                "orientation": {
+                  "start": {
+                    "x": 0.5,
+                    "y": 0.548544921875
+                  },
+                  "stop": {
+                    "x": 0.5,
+                    "y": 0.808544921875
+                  }
+                }
+              }
+            },
+            {
+              "appearance": "dark",
+              "value": {
+                "linear-gradient": [
+                  "srgb:0.65882,0.17255,0.52549,1.00000",
+                  "srgb:0.47843,0.16471,0.61176,1.00000"
+                ],
+                "orientation": {
+                  "start": {
+                    "x": 0.5,
+                    "y": 0.548544921875
+                  },
+                  "stop": {
+                    "x": 0.5,
+                    "y": 0.808544921875
+                  }
+                }
+              }
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "linear-gradient": [
+                  "srgb:0.58039,0.58039,0.58039,1.00000",
+                  "srgb:0.54118,0.54118,0.54118,1.00000"
+                ],
+                "orientation": {
+                  "start": {
+                    "x": 0.5,
+                    "y": 0.548544921875
+                  },
+                  "stop": {
+                    "x": 0.5,
+                    "y": 0.808544921875
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "specular": true,
+      "shadow": {
+        "kind": "layer-color",
+        "opacity": 0.85
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.45
+      },
+      "specular-highlight-placement": "inside",
+      "blur-material": 0.5
+    },
+    {
+      "name": "Land 2",
+      "layers": [
+        {
+          "image-name": "3-land-2.svg",
+          "name": "Land 2",
+          "fill-specializations": [
+            {
+              "value": {
+                "linear-gradient": [
+                  "srgb:1.00000,0.41961,0.27059,1.00000",
+                  "srgb:0.94902,0.27843,0.35294,1.00000"
+                ],
+                "orientation": {
+                  "start": {
+                    "x": 0.5,
+                    "y": 0.348349609375
+                  },
+                  "stop": {
+                    "x": 0.5,
+                    "y": 0.608349609375
+                  }
+                }
+              }
+            },
+            {
+              "appearance": "dark",
+              "value": {
+                "linear-gradient": [
+                  "srgb:0.87843,0.29020,0.23529,1.00000",
+                  "srgb:0.78824,0.20784,0.30588,1.00000"
+                ],
+                "orientation": {
+                  "start": {
+                    "x": 0.5,
+                    "y": 0.348349609375
+                  },
+                  "stop": {
+                    "x": 0.5,
+                    "y": 0.608349609375
+                  }
+                }
+              }
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "linear-gradient": [
+                  "srgb:0.74510,0.74510,0.74510,1.00000",
+                  "srgb:0.70588,0.70588,0.70588,1.00000"
+                ],
+                "orientation": {
+                  "start": {
+                    "x": 0.5,
+                    "y": 0.348349609375
+                  },
+                  "stop": {
+                    "x": 0.5,
+                    "y": 0.608349609375
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "specular": true,
+      "shadow": {
+        "kind": "layer-color",
+        "opacity": 0.85
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.45
+      },
+      "specular-highlight-placement": "inside",
+      "blur-material": 0.5
+    },
+    {
+      "name": "Land 1",
+      "layers": [
+        {
+          "image-name": "4-land-1.svg",
+          "name": "Land 1",
+          "fill-specializations": [
+            {
+              "value": {
+                "linear-gradient": [
+                  "srgb:1.00000,0.64706,0.14902,1.00000",
+                  "srgb:1.00000,0.54118,0.12157,1.00000"
+                ],
+                "orientation": {
+                  "start": {
+                    "x": 0.5,
+                    "y": 0.148154296875
+                  },
+                  "stop": {
+                    "x": 0.5,
+                    "y": 0.40815429687500004
+                  }
+                }
+              }
+            },
+            {
+              "appearance": "dark",
+              "value": {
+                "linear-gradient": [
+                  "srgb:0.93333,0.47843,0.11765,1.00000",
+                  "srgb:0.86667,0.38039,0.10588,1.00000"
+                ],
+                "orientation": {
+                  "start": {
+                    "x": 0.5,
+                    "y": 0.148154296875
+                  },
+                  "stop": {
+                    "x": 0.5,
+                    "y": 0.40815429687500004
+                  }
+                }
+              }
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "linear-gradient": [
+                  "srgb:0.90196,0.90196,0.90196,1.00000",
+                  "srgb:0.86275,0.86275,0.86275,1.00000"
+                ],
+                "orientation": {
+                  "start": {
+                    "x": 0.5,
+                    "y": 0.148154296875
+                  },
+                  "stop": {
+                    "x": 0.5,
+                    "y": 0.40815429687500004
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "specular": true,
+      "shadow": {
+        "kind": "layer-color",
+        "opacity": 0.85
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.45
+      },
+      "specular-highlight-placement": "inside",
+      "blur-material": 0.5
+    }
+  ],
+  "supported-platforms": {
+    "squares": [
+      "macOS"
+    ]
+  }
+}

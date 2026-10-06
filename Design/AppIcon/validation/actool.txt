@@ -1,0 +1,4 @@
+/* com.apple.actool.compilation-results */
+/var/folders/l4/r8h3dm6911q73cn70zxxp8z80000gn/T/daydreaming-icon-7f7bbmkt/compiled/Assets.car
+/var/folders/l4/r8h3dm6911q73cn70zxxp8z80000gn/T/daydreaming-icon-7f7bbmkt/compiled/Daydreaming.icns
+/var/folders/l4/r8h3dm6911q73cn70zxxp8z80000gn/T/daydreaming-icon-7f7bbmkt/compiled/partial.plist

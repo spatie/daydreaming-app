@@ -1,0 +1,8 @@
+// Enable only with a Developer ID provisioning profile that authorizes Keychain Sharing.
+// Pass DAYDREAMING_KEYCHAIN_PROFILE=<profile name> when building; verify signed launch before installing.
+DAYDREAMING_DATA_PROTECTION_KEYCHAIN = YES
+CODE_SIGN_ENTITLEMENTS = WeatherCanvas/WeatherCanvas.data-protection.entitlements
+PROVISIONING_PROFILE_SPECIFIER = $(DAYDREAMING_KEYCHAIN_PROFILE)
+CODE_SIGN_STYLE = Manual
+DEVELOPMENT_TEAM = 97KRXCRMAY
+CODE_SIGN_IDENTITY = Developer ID Application

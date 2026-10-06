@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><!-- sparkle-sign-warning:
+IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
+--><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+  <channel>
+    <title>Daydreaming</title>
+    <link>https://getdaydreaming.com</link>
+    <description>Daydreaming updates.</description>
+    <language>en</language>
+  </channel>
+</rss><!-- sparkle-signatures:
+edSignature: YKHoCTYYrUIi0XAAaIXnE3ZTjbdOWCzxyFadpbFfvJDpFrgtMRGpRD46TMEBJFDP53u5MMqCA3XKoTuQBIbIBw==
+length: 565
+-->

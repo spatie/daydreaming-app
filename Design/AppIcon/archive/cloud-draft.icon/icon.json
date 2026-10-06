@@ -1,0 +1,124 @@
+{
+  "fill": {
+    "linear-gradient": [
+      "srgb:0.984,0.753,0.647,1.000",
+      "srgb:0.541,0.376,0.612,1.000"
+    ],
+    "orientation": {
+      "start": {
+        "x": 0.5,
+        "y": 0
+      },
+      "stop": {
+        "x": 0.5,
+        "y": 1
+      }
+    }
+  },
+  "groups": [
+    {
+      "layers": [
+        {
+          "image-name": "cloud.svg",
+          "name": "Drifting cloud",
+          "fill": {
+            "linear-gradient": [
+              "srgb:0.997,0.969,0.961,1.000",
+              "srgb:0.886,0.792,0.886,1.000"
+            ],
+            "orientation": {
+              "start": {
+                "x": 0.5,
+                "y": 0.35
+              },
+              "stop": {
+                "x": 0.5,
+                "y": 0.67
+              }
+            }
+          }
+        }
+      ],
+      "specular": true,
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.22
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.45
+      }
+    },
+    {
+      "layers": [
+        {
+          "image-name": "ridge.svg",
+          "name": "Quiet hillside",
+          "fill": {
+            "linear-gradient": [
+              "srgb:0.353,0.294,0.510,1.000",
+              "srgb:0.122,0.110,0.282,1.000"
+            ],
+            "orientation": {
+              "start": {
+                "x": 0.5,
+                "y": 0.7
+              },
+              "stop": {
+                "x": 0.5,
+                "y": 1
+              }
+            }
+          }
+        }
+      ],
+      "specular": true,
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.12
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.16
+      }
+    },
+    {
+      "layers": [
+        {
+          "image-name": "sun.svg",
+          "name": "Daylight",
+          "fill": {
+            "linear-gradient": [
+              "srgb:1.000,0.863,0.475,1.000",
+              "srgb:1.000,0.596,0.247,1.000"
+            ],
+            "orientation": {
+              "start": {
+                "x": 0.5,
+                "y": 0.27
+              },
+              "stop": {
+                "x": 0.5,
+                "y": 0.61
+              }
+            }
+          }
+        }
+      ],
+      "specular": true,
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.18
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.12
+      }
+    }
+  ],
+  "supported-platforms": {
+    "squares": [
+      "macOS"
+    ]
+  }
+}

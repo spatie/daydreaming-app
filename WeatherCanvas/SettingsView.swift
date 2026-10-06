@@ -1,300 +1,232 @@
 import SwiftUI
-import UniformTypeIdentifiers
+
+private enum WallpaperQuality: String, CaseIterable, Identifiable {
+    case good = "Good"
+    case better = "Better"
+    case best = "Best"
+
+    var id: String { rawValue }
+    var imageModel: ImageModel { self == .good ? .fast : .precise }
+    var imageQuality: ImageQuality {
+        switch self {
+        case .good: .medium
+        case .better: .high
+        case .best: .xhigh
+        }
+    }
+}
 
 struct SettingsView: View {
     @EnvironmentObject private var model: AppModel
+    @ObservedObject private var updater = UpdaterManager.shared
+    @AppStorage("installationReports.isEnabled") private var sharesInstallationStatistics = true
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage("confirmedHiddenMenuBar") private var confirmedHiddenMenuBar = false
     @State private var keyDraft = ""
-    @State private var licenseDraft = ""
-    @State private var customMinutesDraft = 60
-    @State private var webAddress = ""
-    @State private var webSelector = ""
-    @State private var showingSourceImporter = false
-    @State private var sourceError: String?
-    @State private var isCheckingSource = false
-    @State private var pendingSource: ContextSource?
-    @State private var pendingPreview: ContextPreview = .empty
+    @State private var isEditingKey = false
+    @State private var keyError: String?
+    @State private var storageError: String?
+    @State private var showingClearConfirmation = false
+    @State private var showingKeyRemoval = false
+    @State private var showingHideMenuBarConfirmation = false
+    @FocusState private var keyFieldFocused: Bool
 
     var body: some View {
-        TabView {
-            generalSettings
-                .tabItem { Label("General", systemImage: "gearshape") }
-
-            generationSettings
-                .tabItem { Label("Generation", systemImage: "sparkles") }
-
-            sourcesSettings
-                .tabItem { Label("Sources", systemImage: "text.page") }
-
-            connectionSettings
-                .tabItem { Label("Account", systemImage: "key.horizontal") }
-        }
-        .frame(width: 590, height: 470)
-        .onAppear { customMinutesDraft = model.settings.customMinutes }
-        .fileImporter(
-            isPresented: $showingSourceImporter,
-            allowedContentTypes: [.plainText, .html, .json]
-        ) { result in
-            if case .success(let url) = result {
-                let access = url.startAccessingSecurityScopedResource()
-                defer { if access { url.stopAccessingSecurityScopedResource() } }
-                do {
-                    prepareSource(try ContextSource.selectedFile(url))
-                } catch {
-                    sourceError = error.localizedDescription
-                }
-            }
-        }
-        .sheet(item: $pendingSource) { source in
-            sourceConfirmation(source)
-        }
-    }
-
-    private var generalSettings: some View {
         Form {
-            Section("Background") {
-                Toggle("Launch at login", isOn: Binding(
+            Section {
+                Toggle("Launch at Login", isOn: Binding(
                     get: { model.launchAtLogin },
                     set: { model.setLaunchAtLogin($0) }
                 ))
-                Toggle("Show menu bar icon", isOn: $model.showMenuBar)
-                Text("If you hide the icon, open Daydreaming again to return to this window. The app has no Dock icon.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("Weather") {
-                Picker("Condition", selection: $model.settings.weatherChoice) {
-                    ForEach(WeatherChoice.allCases) { choice in
-                        Text(choice.title).tag(choice)
-                    }
-                }
-                Text("Automatic weather uses your approximate location and a forecast from MET Norway.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .formStyle(.grouped)
-    }
-
-    private var generationSettings: some View {
-        Form {
-            Section("Image generation") {
-                Picker("Model", selection: $model.settings.model) {
-                    ForEach(ImageModel.allCases) { imageModel in
-                        Text(imageModel.title).tag(imageModel)
-                    }
-                }
-                Picker("Quality", selection: $model.settings.quality) {
-                    ForEach(ImageQuality.allCases) { quality in
-                        Text(quality.title).tag(quality)
-                    }
-                }
-                Toggle("Reuse matching images", isOn: $model.settings.reuseMatchingImages)
-            }
-
-            Section("Schedule") {
-                if model.settings.interval == .custom {
-                    Stepper(
-                        "Every \(customMinutesDraft) minutes",
-                        value: $customMinutesDraft,
-                        in: 5...1_440,
-                        step: 5
-                    )
-                    if customMinutesDraft != model.settings.customMinutes {
-                        Button("Apply custom interval") {
-                            model.settings.customMinutes = customMinutesDraft
+                Toggle("Show in Menu Bar", isOn: Binding(
+                    get: { model.showMenuBar },
+                    set: { visible in
+                        if visible || confirmedHiddenMenuBar {
+                            model.showMenuBar = visible
+                        } else {
+                            showingHideMenuBarConfirmation = true
                         }
                     }
+                ))
+                Button("Run Setup Again…") {
+                    if model.restartOnboarding() { dismiss() }
                 }
-                if model.hasProLicense {
-                    Stepper(
-                        "At most \(model.settings.dailyGenerationLimit) new images per day",
-                        value: $model.settings.dailyGenerationLimit,
-                        in: 1...288
-                    )
-                } else {
-                    Text("At most two new images per day")
-                }
-                Text("Saved images can be reused without spending API credit.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                .disabled(!model.onboardingComplete || model.isGenerating)
+                .help(model.isGenerating ? "Finish the current wallpaper first." : "Revisit setup with your picture and API key kept. Automatic updates pause.")
             }
 
-            Section("Storage") {
-                HStack {
-                    Text("Generated images")
-                    Spacer()
-                    Text(model.cacheSizeLabel)
-                        .foregroundStyle(.secondary)
-                    Button("Clear") { model.clearCache() }
+            Section("App Updates") {
+                Toggle("Automatically Check for Updates", isOn: Binding(
+                    get: { updater.automaticallyChecks },
+                    set: { updater.setAutomaticallyChecks($0) }
+                ))
+                .disabled(!updater.isEnabled)
+                Button("Check for Updates…") { updater.checkForUpdates() }
+                    .disabled(!updater.canCheckForUpdates)
+                if !updater.isEnabled {
+                    Text("Updates will be available after the first release.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
-            }
-        }
-        .formStyle(.grouped)
-    }
-
-    private var sourcesSettings: some View {
-        Form {
-            Section("Optional data") {
-                Text("Give the image editor text from a file or a specific element on an HTTPS page. Preview the extracted text before adding a source.")
-                    .foregroundStyle(.secondary)
-                Text("Reads text already present in page HTML. Website scripts are not run.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                ForEach(model.settings.contextSources) { source in
-                    HStack {
-                        Text(source.displayName)
-                            .lineLimit(1)
-                        Spacer()
-                        Button("Remove") { model.removeSource(source) }
-                    }
-                }
-                Button("Choose a text, HTML, or JSON file") {
-                    showingSourceImporter = true
-                }
-                .disabled(model.settings.contextSources.count >= 5 || isCheckingSource)
+                Toggle("Share Installation Statistics", isOn: $sharesInstallationStatistics)
+                    .help("Reports a random installation ID, app version and macOS version. Pictures, ideas and API keys are never included.")
             }
 
-            Section("Web page element") {
-                TextField("HTTPS URL", text: $webAddress)
-                    .textContentType(.URL)
-                TextField("CSS selector, such as #temperature", text: $webSelector)
-                Button("Check page") {
-                    guard let url = URL(string: webAddress.trimmingCharacters(in: .whitespacesAndNewlines)) else {
-                        sourceError = ContextSourceError.invalidWebsiteURL.localizedDescription
-                        return
-                    }
-                    do {
-                        prepareSource(try ContextSource.selectedWebPage(url, selector: webSelector))
-                    } catch {
-                        sourceError = error.localizedDescription
-                    }
-                }
-                .disabled(model.settings.contextSources.count >= 5 || isCheckingSource)
-            }
-
-            if isCheckingSource {
-                Section { ProgressView("Reading source…") }
-            }
-            if let sourceError {
-                Section { Text(sourceError).foregroundStyle(.red) }
-            }
-
-            if !model.contextPreview.promptText.isEmpty {
-                Section("Connected data preview") {
-                    ScrollView {
-                        Text(model.contextPreview.promptText)
-                            .font(.system(.caption, design: .monospaced))
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .frame(height: 100)
-                    Button("Refresh preview") { model.previewSources() }
-                        .disabled(model.isReadingSources)
-                }
-            } else if !model.settings.contextSources.isEmpty {
-                Section {
-                    Button("Preview connected data") { model.previewSources() }
-                        .disabled(model.isReadingSources)
-                }
-            }
-        }
-        .formStyle(.grouped)
-    }
-
-    private var connectionSettings: some View {
-        Form {
-            Section("OpenAI") {
-                HStack {
-                    SecureField("API key", text: $keyDraft)
-                    Button(model.hasSavedKey ? "Replace" : "Save") {
-                        if model.saveKey(keyDraft) { keyDraft = "" }
-                    }
-                    .disabled(keyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
+            Section("OpenAI API Key") {
+                if let message = model.keyRecoveryMessage { inlineError(message) }
                 if model.hasSavedKey {
                     HStack {
-                        Label("Key saved in Keychain", systemImage: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
+                        Label("OpenAI key saved", systemImage: "key.fill")
                         Spacer()
-                        Button("Remove key") { model.removeKey() }
-                    }
-                }
-                Link("Manage API keys", destination: URL(string: "https://platform.openai.com/api-keys")!)
-            }
-
-            Section("License") {
-                if let license = model.license {
-                    Label("Licensed, all update intervals available", systemImage: "checkmark.seal.fill")
-                    Text("License ID: \(license.id)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Button("Remove license") { model.removeLicense() }
-                } else {
-                    Text("Free plan: up to two new images per day.")
-                        .foregroundStyle(.secondary)
-                    HStack {
-                        SecureField("License key", text: $licenseDraft)
-                        Button("Activate") {
-                            if model.activateLicense(licenseDraft) { licenseDraft = "" }
+                        if !isEditingKey {
+                            Button("Replace…") {
+                                keyError = nil
+                                isEditingKey = true
+                                keyFieldFocused = true
+                            }
                         }
-                        .disabled(licenseDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        Button("Remove…", role: .destructive) { showingKeyRemoval = true }
+                            .disabled(model.isGenerating)
                     }
                 }
+                if !model.hasSavedKey || isEditingKey {
+                    HStack {
+                        SecureField(model.hasSavedKey ? "Replacement key" : "OpenAI API key", text: $keyDraft)
+                            .focused($keyFieldFocused)
+                            .onSubmit { saveKey() }
+                        if model.hasSavedKey {
+                            Button("Cancel") { cancelKeyEditing() }
+                                .keyboardShortcut(.cancelAction)
+                        }
+                        Button("Save") { saveKey() }
+                            .disabled(keyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            .keyboardShortcut(.defaultAction)
+                    }
+                }
+                if let keyError { inlineError(keyError) }
+                HStack {
+                    Text("Stored in Keychain.")
+                    Spacer()
+                    Link("Manage Keys", destination: URL(string: "https://platform.openai.com/api-keys")!)
+                }
+                .font(.caption).foregroundStyle(.secondary)
             }
 
-            Section("Privacy") {
-                Text("Originals and generated wallpapers stay on this Mac. Creating a version sends the source image and optional connected text directly to OpenAI.")
+            Section {
+                Picker("Wallpaper Quality", selection: qualitySelection) {
+                    if qualitySelection.wrappedValue == nil {
+                        Text("Current Settings").tag(Optional<WallpaperQuality>.none)
+                    }
+                    ForEach(WallpaperQuality.allCases) { quality in
+                        Text(quality.rawValue).tag(Optional(quality))
+                    }
+                }
+                .help("Desktop wallpaper quality. Previews use low quality for speed. Higher quality can cost more.")
+                Text("Previews use low quality for speed.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Stepper(
+                    "Images per Day: \(model.settings.dailyGenerationLimit)",
+                    value: $model.settings.dailyGenerationLimit,
+                    in: 1...288
+                )
+                .help("Maximum new previews and wallpapers per day. Reusing saved images does not count.")
+                LabeledContent("Today", value: model.usageCountLabel)
                     .foregroundStyle(.secondary)
             }
 
-            if model.status == "Something went wrong" {
-                Section { Text(model.detail).foregroundStyle(.red) }
+            Section {
+                HStack {
+                    LabeledContent("Image Storage", value: model.cacheSizeLabel)
+                        .help("Storage used by saved previews and wallpapers. Original pictures are stored separately.")
+                    Button("Clear…", role: .destructive) { showingClearConfirmation = true }
+                        .disabled(model.isGenerating)
+                }
+                Button(AppCopy.previousPictures) { model.openSavedWallpapers() }
+                    .help(AppCopy.previousPicturesHelp)
+                if let storageError { inlineError(storageError) }
+            } footer: {
+                Text("Creating sends your picture and prompt context to OpenAI. OpenAI bills your API key for each new image.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
-    }
-
-    private func prepareSource(_ source: ContextSource) {
-        sourceError = nil
-        isCheckingSource = true
-        Task { @MainActor in
-            defer { isCheckingSource = false }
-            do {
-                pendingPreview = try await ContextSourceReader().readAll([source])
-                pendingSource = source
-            } catch {
-                sourceError = error.localizedDescription
+        .frame(width: 440)
+        .frame(minHeight: 540, idealHeight: 600)
+        .alert("Hide the Menu Bar Icon?", isPresented: $showingHideMenuBarConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Hide Icon") {
+                confirmedHiddenMenuBar = true
+                model.showMenuBar = false
             }
+        } message: {
+            Text("Daydreaming keeps running without a menu bar or Dock icon. Open it from Applications or Spotlight to return. You can restore the icon in Settings.")
         }
+        .alert("Clear Saved Previews and Wallpapers?", isPresented: $showingClearConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Clear Saved Images", role: .destructive) {
+                guard !model.isGenerating else { return }
+                storageError = nil
+                model.clearCache()
+                if model.activity == .failed { storageError = model.detail }
+            }
+        } message: {
+            Text("This deletes saved previews and wallpapers, restores your original on all screens, and pauses updates. Previous original pictures are kept. Creating replacements uses OpenAI credit.")
+        }
+        .alert("Remove Your OpenAI API Key?", isPresented: $showingKeyRemoval) {
+            Button("Cancel", role: .cancel) {}
+            Button("Remove Key", role: .destructive) {
+                guard !model.isGenerating else { return }
+                model.removeKey()
+                keyError = model.hasSavedKey ? model.detail : nil
+                cancelKeyEditing()
+            }
+        } message: {
+            Text("Updates will pause. Your current wallpaper and saved pictures stay on this Mac. You can add a key again later.")
+        }
+        .onChange(of: sharesInstallationStatistics) { _, enabled in
+            InstallationReporter.shared.isEnabled = enabled
+            if enabled { Task { _ = await InstallationReporter.shared.reportIfDue() } }
+        }
+        .onDisappear { cancelKeyEditing() }
     }
 
-    private func sourceConfirmation(_ source: ContextSource) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Add \(source.displayName)?")
-                .font(.title2.weight(.semibold))
-            Text("This is what the app reads now. It checks the source again before each new image.")
-                .foregroundStyle(.secondary)
-            ScrollView {
-                Text(pendingPreview.promptText)
-                    .font(.system(.caption, design: .monospaced))
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .frame(maxHeight: .infinity)
-            HStack {
-                Spacer()
-                Button("Cancel") { pendingSource = nil }
-                Button("Add source") {
-                    model.addSource(source, preview: pendingPreview)
-                    pendingSource = nil
-                    webAddress = ""
-                    webSelector = ""
+    private var qualitySelection: Binding<WallpaperQuality?> {
+        Binding(
+            get: {
+                WallpaperQuality.allCases.first {
+                    $0.imageModel == model.settings.model && $0.imageQuality == model.settings.quality
                 }
-                .buttonStyle(.borderedProminent)
+            },
+            set: { quality in
+                guard let quality else { return }
+                var settings = model.settings
+                settings.model = quality.imageModel
+                settings.quality = quality.imageQuality
+                model.settings = settings
             }
+        )
+    }
+
+    private func saveKey() {
+        guard !keyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        keyError = nil
+        if model.saveKey(keyDraft) {
+            cancelKeyEditing()
+        } else {
+            keyError = model.detail
         }
-        .padding(24)
-        .frame(width: 520, height: 390)
+    }
+
+    private func cancelKeyEditing() {
+        keyDraft = ""
+        isEditingKey = false
+        keyFieldFocused = false
+    }
+
+    private func inlineError(_ text: String) -> some View {
+        Label(text, systemImage: "exclamationmark.circle")
+            .foregroundStyle(.red)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityLabel("Error: \(text)")
     }
 }

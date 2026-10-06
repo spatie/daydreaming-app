@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Daydreaming · A simpler workspace</title>
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="prototype-note"><span>Simulated design prototype <span class="note-detail">· Simulated images, no API calls or desktop changes</span></span><button id="resetDemo" class="text-button">Reset demo</button></div>
+  <main class="app-window" id="app" aria-label="Daydreaming">
+    <header class="titlebar">
+      <div class="window-controls" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="app-title"><img src="assets/icon.svg" alt="" width="23" height="23"><span>Daydreaming</span></div>
+      <button id="historyButton" class="toolbar-button" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12M4 6h16M3 9h18v12H3zM6 18l4-4 3 3 2-2 3 3"/><circle cx="16" cy="12" r="1"/></svg>Previous pictures</button>
+    </header>
+
+    <div class="workspace">
+      <aside class="creative-panel">
+        <section class="picture-section" aria-labelledby="pictureLabel">
+          <h2 id="pictureLabel">Your picture</h2>
+          <button class="source-picture" id="sourceButton" aria-label="Choose a picture"><img id="sourceThumbnail" src="assets/yosemite-original.jpg" alt="Yosemite Valley, your original picture"><span class="empty-source" id="emptySource" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v14H3zM6 16l4-4 3 3 2-2 3 3"/><circle cx="16" cy="9" r="1"/></svg><strong>Choose a picture…</strong><span>or drop one anywhere in this window</span></span><span class="change-photo">Choose…</span><span class="crop-badge" id="cropBadge" hidden>Cropped</span></button>
+          <div class="picture-details"><div class="picture-name" id="pictureName">Yosemite Valley</div><button class="text-button" id="changePicture">Change…</button></div>
+          <p class="small-note" id="dropHint">Or drop a picture anywhere.</p>
+          <input type="file" id="fileInput" accept="image/*" hidden>
+        </section>
+
+        <section class="idea-section" aria-labelledby="ideaLabel">
+          <div class="label-row"><label id="ideaLabel" for="idea">Your idea</label><span class="help-wrap"><button type="button" class="help-button" aria-label="About your idea" aria-describedby="ideaHelp">?</button><span class="tooltip" id="ideaHelp" role="tooltip">Describe the feeling or changes you want. Daydreaming adds the time and local weather.</span></span></div>
+          <textarea id="idea" rows="4" maxlength="280" spellcheck="true" placeholder="A little mist at sunrise, warm light at dusk…">Update my picture according to the current time and weather conditions.</textarea>
+          <div class="idea-foot"><span id="ideaFeedback">Changes preview automatically.</span><span id="characterCount" hidden></span></div>
+        </section>
+        <div class="sidebar-bottom" id="fileError" role="alert"></div>
+      </aside>
+
+      <section class="preview-panel" aria-labelledby="previewLabel">
+        <div class="preview-heading"><h2 id="previewLabel">Preview</h2><button class="secondary-button crop-button" id="cropButton" title="Crop your original picture here"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2v15h15M2 7h15v15"/></svg>Crop picture</button></div>
+        <div class="artwork" id="artwork">
+          <div class="empty-preview" id="emptyPreview" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v14H3zM6 16l4-4 3 3 2-2 3 3"/><circle cx="16" cy="9" r="1"/></svg><span>Choose a picture to see it change through the day.</span><button class="text-button" id="tryYosemite">Try it with Yosemite Valley</button></div>
+          <img class="preview-image" id="previewImage" src="assets/clear-morning.webp" alt="Your picture reimagined for 14:00">
+          <div class="preview-tone" id="previewTone" aria-hidden="true"></div>
+          <div class="waiting" id="waiting" hidden><div class="dream-light" aria-hidden="true"></div><div class="waiting-message"><span class="spinner" aria-hidden="true"></span><span id="waitingText">Reimagining your picture…</span></div></div>
+          <div class="crop-workspace" id="cropWorkspace" hidden><img id="cropImage" alt="Original picture to frame"><div class="crop-shade" aria-hidden="true"></div><div class="crop-frame" id="cropFrame" aria-hidden="true"><div class="thirds-grid"></div><i></i><i></i><i></i><i></i></div></div>
+        </div>
+        <div class="timeline" id="timeline">
+          <div class="timeline-heading"><label for="hour">Preview the day</label><button class="text-button" id="nowButton" hidden>Back to now</button></div>
+          <div class="hour-track"><output id="hourBubble" for="hour" aria-hidden="true"></output><input type="range" id="hour" min="0" max="23" step="1" value="14" aria-label="Preview time" aria-valuetext="14:00"></div>
+          <div class="time-labels" aria-hidden="true"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>23:00</span></div>
+        </div>
+        <div class="crop-controls" id="cropControls" hidden><span>Drag to move. Pinch or scroll to zoom.</span><div class="zoom-row"><button type="button" id="zoomOut" class="zoom-button" aria-label="Zoom out">−</button><input type="range" id="zoom" min="1" max="4" step="0.01" value="1" aria-label="Picture zoom"><button type="button" id="zoomIn" class="zoom-button" aria-label="Zoom in">+</button><button class="text-button" id="resetCrop">Reset</button></div></div>
+      </section>
+    </div>
+
+    <footer class="confirmation" id="confirmation">
+      <div class="confirmation-copy" id="confirmationCopy" hidden><div id="confirmationTitle"></div><p id="confirmationDetail"></p></div>
+      <div class="confirmation-actions"><span class="running-indicator" id="runningIndicator" hidden><i></i>Running</span><button class="primary-button" id="startButton">Start Daydreaming<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div>
+    </footer>
+    <footer class="confirmation crop-confirmation" id="cropConfirmation" hidden><div class="confirmation-copy"><div>Frame your original picture</div><p>Your preview will refresh when you finish.</p></div><div class="confirmation-actions"><button class="secondary-button" id="cancelCrop">Cancel</button><button class="primary-button" id="doneCrop">Done</button></div></footer>
+    <div class="drop-overlay" id="dropOverlay" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v14H3zM6 16l4-4 3 3 2-2 3 3"/><circle cx="16" cy="9" r="1"/></svg><strong>Drop your picture</strong><span>A new preview will appear automatically.</span></div>
+    <div class="sr-only" role="status" aria-live="polite" id="announcer"></div>
+  </main>
+
+  <dialog id="historyDialog" aria-labelledby="historyTitle"><header class="dialog-heading"><div><h2 id="historyTitle">Previous pictures</h2><p>Return to a picture and its ideas.</p></div><button id="closeHistory" class="close-dialog" aria-label="Close previous pictures">×</button></header><div id="historyList" class="history-list"></div><div class="dialog-foot">Choosing a picture refreshes the preview. It does not change your desktop.</div></dialog>
+  <script src="app.js"></script>
+</body>
+</html>

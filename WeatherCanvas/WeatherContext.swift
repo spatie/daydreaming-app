@@ -1,11 +1,23 @@
 import CoreLocation
 import Foundation
 
+enum OnboardingLocationPolicy {
+    static func updated(_ state: OnboardingLocationState, authorization: CLAuthorizationStatus) -> OnboardingLocationState {
+        guard state == .requesting || state == .denied else { return state }
+        switch authorization {
+        case .authorized, .authorizedAlways: return .allowed
+        case .denied, .restricted: return .denied
+        default: return state
+        }
+    }
+}
+
 @MainActor
 final class LocationReader: NSObject, @preconcurrency CLLocationManagerDelegate {
     private let manager = CLLocationManager()
     private(set) var location: CLLocation?
     var onLocation: (() -> Void)?
+    private var hasRequested = false
     var authorizationStatus: CLAuthorizationStatus { manager.authorizationStatus }
 
     override init() {
@@ -15,6 +27,7 @@ final class LocationReader: NSObject, @preconcurrency CLLocationManagerDelegate 
     }
 
     func request() {
+        hasRequested = true
         switch manager.authorizationStatus {
         case .notDetermined:
             manager.requestWhenInUseAuthorization()
@@ -26,7 +39,7 @@ final class LocationReader: NSObject, @preconcurrency CLLocationManagerDelegate 
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        if manager.authorizationStatus == .authorized || manager.authorizationStatus == .authorizedAlways {
+        if hasRequested && (manager.authorizationStatus == .authorized || manager.authorizationStatus == .authorizedAlways) {
             manager.requestLocation()
         } else {
             onLocation?()
@@ -64,9 +77,20 @@ enum WeatherContextError: LocalizedError {
 @MainActor
 final class WeatherContextProvider {
     private var cachedSnapshot: WeatherSnapshot?
+    private var hourlyForecast: [HourlyWeatherForecast] = []
     private var cachedCoordinates: String?
     private var nextFetchAt: Date = .distantPast
     private var lastModified: String?
+
+    func cachedWeather(at date: Date, now: Date = .now) -> WeatherSnapshot? {
+        guard let current = cachedSnapshot else { return nil }
+        return HourlyWeatherForecast.select(date: date, now: now, current: current, forecast: hourlyForecast)
+    }
+
+    func weather(at date: Date, location: CLLocation, now: Date = .now) async throws -> WeatherSnapshot {
+        let current = try await current(at: location)
+        return HourlyWeatherForecast.select(date: date, now: now, current: current, forecast: hourlyForecast)
+    }
 
     func current(at location: CLLocation) async throws -> WeatherSnapshot {
         let latitude = Self.coordinate(location.coordinate.latitude)
@@ -123,6 +147,11 @@ final class WeatherContextProvider {
 
         let label = Self.label(for: symbolCode)
         let snapshot = WeatherSnapshot(label: label, symbol: Self.symbol(for: label), fetchedAt: .now)
+        hourlyForecast = forecast.properties.timeseries.compactMap { step in
+            guard let date = ISO8601DateFormatter().date(from: step.time), let code = step.data.nextHour?.summary.symbolCode else { return nil }
+            let label = Self.label(for: code)
+            return HourlyWeatherForecast(date: date, weather: WeatherSnapshot(label: label, symbol: Self.symbol(for: label), fetchedAt: .now))
+        }
         cachedSnapshot = snapshot
         cachedCoordinates = coordinates
         nextFetchAt = max(Date().addingTimeInterval(900), Self.expiry(from: response) ?? .distantPast)
@@ -189,9 +218,23 @@ private struct ForecastResponse: Decodable {
                 let nextHour: Period?
                 enum CodingKeys: String, CodingKey { case nextHour = "next_1_hours" }
             }
+            let time: String
             let data: DataPoint
         }
         let timeseries: [TimeStep]
     }
     let properties: Properties
+}
+
+
+struct HourlyWeatherForecast: Equatable, Sendable {
+    let date: Date
+    let weather: WeatherSnapshot
+
+    static func select(date: Date, now: Date, current: WeatherSnapshot, forecast: [Self], calendar: Calendar = .current) -> WeatherSnapshot {
+        let hour = calendar.dateInterval(of: .hour, for: date)?.start ?? date
+        let currentHour = calendar.dateInterval(of: .hour, for: now)?.start ?? now
+        guard hour > currentHour, calendar.isDate(date, inSameDayAs: now) else { return current }
+        return forecast.first { calendar.isDate($0.date, equalTo: date, toGranularity: .hour) }?.weather ?? current
+    }
 }
