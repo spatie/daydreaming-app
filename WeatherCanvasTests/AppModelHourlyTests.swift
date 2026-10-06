@@ -1042,13 +1042,14 @@ final class AppModelHourlyTests: XCTestCase {
         await model.refreshIfNeeded(userInitiated: true)
         await appEventually { fake.applied.count == 1 && !model.isGenerating }
         let created = try XCTUnwrap(model.currentSavedWallpaperEntry)
+        XCTAssertEqual(model.shownPictureDescription, "Image for \(model.hourLabel(14)) · Clear")
         let applied = model.lastUpdated
         fake.clock = fake.clock.addingTimeInterval(7 * 3600)
         model.backToNow()
         XCTAssertEqual(model.previewPresentation.requestedHour, 21)
         XCTAssertEqual(model.previewPresentation.state, .onDesktop)
         XCTAssertEqual(model.currentSavedWallpaperEntry?.hour, 14)
-        XCTAssertEqual(model.shownPictureDescription, "Image for \(model.hourLabel(14)) · Clear")
+        XCTAssertEqual(model.shownPictureDescription, "Showing your desktop image\nImage for \(model.hourLabel(14)) · Clear")
         XCTAssertTrue(model.shownPictureCreationDescription?.contains(created.createdAt.formatted(date: .abbreviated, time: .shortened)) == true)
         XCTAssertTrue(model.desktopPictureDescription?.contains("image for \(model.hourLabel(14))") == true)
         XCTAssertFalse(model.shownPictureAccessibilityDescription.contains(model.hourLabel(21)))

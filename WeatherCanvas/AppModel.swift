@@ -695,9 +695,14 @@ final class AppModel: ObservableObject {
 
     /// Describes the actual file on the canvas, independently of the requested slider hour.
     var shownPictureDescription: String? {
+        let presentation = previewPresentation
         guard let entry = currentSavedWallpaperEntry,
-              [.ready, .onDesktop, .stale].contains(previewPresentation.state) else { return nil }
-        return "Image for \(hourLabel(entry.hour)) · \(entry.weather.label.capitalized)"
+              [.ready, .onDesktop, .stale].contains(presentation.state) else { return nil }
+        let description = "Image for \(hourLabel(entry.hour)) · \(entry.weather.label.capitalized)"
+        if presentation.state == .onDesktop, entry.hour != presentation.requestedHour {
+            return "Showing your desktop image\n" + description
+        }
+        return description
     }
 
     var shownPictureCreationDescription: String? {
