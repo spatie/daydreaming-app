@@ -256,7 +256,7 @@ struct ContentView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scrollBounceBehavior(.basedOnSize)
-        .background(Color(nsColor: .controlBackgroundColor).opacity(reduceTransparency || contrast == .increased ? 1 : 0.88))
+        .background(Color(nsColor: .controlBackgroundColor).opacity(reduceTransparency || contrast == .increased ? 1 : 0.5))
         .disabled(isCropping || model.isConfirmingPicture)
     }
 
@@ -319,7 +319,7 @@ struct ContentView: View {
                                     onSelectionChange: { crop in
                                         cropDraft = crop
                                     }, onBaselineChange: { cropAtStart = $0 }, onImageSizeChange: { cropImageSize = $0 },
-                                    initialCrop: cropDraft, onClose: nil) { _ in }
+                                    initialCrop: cropDraft, onClose: nil, imageCopy: model.imageCopy) { _ in }
                         .disabled(savingCrop)
                 } else if hasPicture { artwork }
                 else { emptyPreview }
@@ -339,7 +339,7 @@ struct ContentView: View {
                             Text("Preview the day").font(.callout.weight(.medium))
                             Spacer()
                         }
-                        Text(AppCopy.previewTimeNotice)
+                        Text(model.imageCopy.previewTimeNotice)
                             .font(.caption).foregroundStyle(.primary)
                             .fixedSize(horizontal: false, vertical: true)
                         timeSlider(now: timeline.date)
@@ -452,9 +452,9 @@ struct ContentView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("About your idea")
-            .help(AppCopy.ideaHelp)
+            .help(model.imageCopy.ideaHelp)
             .popover(isPresented: $showingPromptHelp) {
-                Text(AppCopy.ideaHelp)
+                Text(model.imageCopy.ideaHelp)
                     .padding(16).frame(width: 270)
             }
         }
@@ -497,7 +497,7 @@ struct ContentView: View {
                     if !promptFocused && model.stagedPictureURL == nil { promptDraft = PromptRenderer.editableText(prompt) }
                 }
                 .accessibilityLabel("Your idea")
-                .accessibilityHint("Describe how your picture should change. When you stop typing, a preview is created using OpenAI credit. \(AppCopy.usePictureAndIdeaAsWallpaper) starts automatic updates.")
+                .accessibilityHint("Describe how your picture should change. When you stop typing, a preview is created using \(model.imageCreditName). \(AppCopy.usePictureAndIdeaAsWallpaper) starts automatic updates.")
                 .dropDestination(for: URL.self) { urls, _ in
                     guard !isCropping, model.stagedPictureURL == nil, let file = urls.first else { return false }
                     if UTType(filenameExtension: file.pathExtension)?.conforms(to: .image) == true {
@@ -511,7 +511,7 @@ struct ContentView: View {
                     promptDraft = PromptRenderer.editableText(model.settings.promptTemplate)
                     return true
                 }
-            Text(AppCopy.ideaPreviewNotice)
+            Text(model.imageCopy.ideaPreviewNotice)
                 .font(.caption).foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -529,7 +529,7 @@ struct ContentView: View {
                     Button(savingCrop ? "Saving…" : "Done") { finishCrop() }
                         .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
                         .disabled(cropDraft == nil || savingCrop)
-                        .help(AppCopy.cropDoneNotice(hasChanges: cropHasChanges))
+                        .help(model.imageCopy.cropDoneNotice(hasChanges: cropHasChanges))
                 }
             } else {
                 HStack { Spacer(); wallpaperDecision.fixedSize(horizontal: true, vertical: false) }
@@ -558,7 +558,7 @@ struct ContentView: View {
         if isCropping {
             if let cropError { Text(cropError).foregroundStyle(.red).lineLimit(2) }
             else {
-                Text(AppCopy.cropDoneNotice(hasChanges: cropHasChanges))
+                Text(model.imageCopy.cropDoneNotice(hasChanges: cropHasChanges))
                     .font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -605,7 +605,7 @@ struct ContentView: View {
     private var wallpaperActionHelp: String {
         model.isCurrentRecipeAdopted && !promptHasChanges
             ? "This picture and idea are already your wallpaper. Returns to the current time without creating another image."
-            : "Creates a full-quality wallpaper now and keeps it changing with the time and weather. Uses OpenAI credit."
+            : "Creates a full-quality wallpaper now and keeps it changing with the time and weather. Uses \(model.imageCreditName)."
     }
 
     private var cropHasChanges: Bool {
@@ -701,8 +701,8 @@ struct ContentView: View {
             }.frame(height: 18).accessibilityHidden(true)
         }
         .accessibilityValue(sliderAccessibilityValue)
-        .help(AppCopy.previewTimeHelp)
-        .accessibilityHint(AppCopy.previewTimeHelp)
+        .help(model.imageCopy.previewTimeHelp)
+        .accessibilityHint(model.imageCopy.previewTimeHelp)
     }
 
     private var sliderAccessibilityValue: String {
@@ -783,6 +783,7 @@ struct ContentView: View {
     private func recoveryTitle(_ recovery: WallpaperRecovery) -> String {
         if recovery == .apiKey && !model.hasImageConnection { return "Add API Key…" }
         if recovery == .weather { return "Allow Location…" }
+        if recovery == .billing { return "Check Provider Billing…" }
         return recovery.title
     }
 
@@ -793,7 +794,9 @@ struct ContentView: View {
         case .retry: model.retryUpdate()
         case .weather: model.requestLocalWeatherAccess()
         case .apiKey: openSettings()
-        case .billing: NSWorkspace.shared.open(URL(string: "https://platform.openai.com/settings/organization/billing/overview")!)
+        case .billing:
+            if let url = model.imageProviderDescriptor?.billingURL { NSWorkspace.shared.open(url) }
+            else { openSettings() }
                 }
         NSApp.activate()
     }

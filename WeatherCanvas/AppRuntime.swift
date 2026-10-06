@@ -19,10 +19,10 @@ struct KeychainNamespace {
     let previousService: String?
     let allowsAccess: Bool
 
-    init(bundleID: String?) {
+    init(bundleID: String?, providerID: String = "openai") {
         let identifier = bundleID ?? "be.spatie.daydreaming.unidentified"
-        service = identifier + ".openai"
-        previousService = identifier == AppRuntime.productionBundleID ? "be.spatie.weathercanvas.openai" : nil
+        service = identifier + "." + providerID
+        previousService = identifier == AppRuntime.productionBundleID && providerID == "openai" ? "be.spatie.weathercanvas.openai" : nil
         allowsAccess = bundleID != nil && !AppRuntime.isPreview(bundleID: bundleID)
     }
 }

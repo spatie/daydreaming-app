@@ -28,6 +28,13 @@ final class AppModel: ObservableObject {
     @Published var settings: CanvasSettings {
         didSet {
             if isPreparingForAppUpdate { saveSettings(); return }
+            if hasFinishedLoading && settings.imageProvider != oldValue.imageProvider {
+                desktopSelectionRevision += 1
+                cancelQueue()
+                draftPreviewSettings = nil
+                previousWallpaperRecipe?.imageProvider = settings.imageProvider
+                refreshImageConnection()
+            }
             if hasFinishedLoading && (settings.interval != oldValue.interval || settings.intervalMinutes != oldValue.intervalMinutes) {
                 scheduledNextCheck = settings.nextWallpaperDate(after: pipelineNow)
                 withdrawUnpaidAutomaticWork()
@@ -145,7 +152,7 @@ final class AppModel: ObservableObject {
 
     private lazy var locationReader = LocationReader()
     private let weatherProvider = WeatherContextProvider()
-    private let imageClient = OpenAIImageClient()
+    private var imageGeneration = ImageGenerationService()
     private var scheduler: Task<Void, Never>?
     private var queueResumeTask: Task<Void, Never>?
     private var hasFinishedLoading = false
@@ -264,8 +271,7 @@ final class AppModel: ObservableObject {
             previousWallpaperRecipe = try? JSONDecoder().decode(CanvasSettings.self, from: data)
             previousWallpaperRecipe?.weatherChoice = .automatic
         }
-        do { hasSavedKey = try KeychainStore.read() != nil }
-        catch { keyRecoveryMessage = error.localizedDescription }
+        refreshImageConnection()
         CodexLegacyCleanup.runIfNeeded()
 
         if currentData == nil,
@@ -349,9 +355,11 @@ final class AppModel: ObservableObject {
         finishHourlyInitialization()
     }
 
-    init(settings: CanvasSettings, hourlyServices: AppModelHourlyServices, nextScheduledCheck: Date? = nil) {
+    init(settings: CanvasSettings, hourlyServices: AppModelHourlyServices, nextScheduledCheck: Date? = nil,
+         imageGeneration: ImageGenerationService? = nil) {
         self.settings = CanvasSettings()
         self.hourlyServices = hourlyServices
+        if let imageGeneration { self.imageGeneration = imageGeneration }
         isDesignPreview = true
         // Restore in the same order as production, before observing saved settings.
         scheduledNextCheck = nextScheduledCheck
@@ -391,7 +399,7 @@ final class AppModel: ObservableObject {
             if backgroundTasksAllowed, hasImageConnection { generationQueue.resume() }
             if onboardingComplete && status == "Choose an image to begin" {
                 status = "Ready when you are"
-                detail = "Create a new wallpaper. " + "OpenAI bills your API key for each new image."
+                detail = "Create a new wallpaper. " + imageBillingNotice
             }
         }
         if let storageError = generationStorageError
@@ -756,7 +764,7 @@ final class AppModel: ObservableObject {
     var automaticUpdateStatus: String {
         guard settings.automaticUpdates else { return "Automatic updates paused" }
         if activity == .failed, recovery == .apiKey { return "Updates blocked · replace API key" }
-        if activity == .failed, recovery == .billing { return "Updates blocked · check OpenAI credit" }
+        if activity == .failed, recovery == .billing { return "Updates blocked · check \(imageCreditName)" }
         if remainingGenerations == 0 { return "Daily image limit reached" }
         if isMakingCurrentWallpaper || isAdoptingWallpaper { return "Updating your wallpaper…" }
         return "Automatic updates on · next \(nextWallpaperTime)"
@@ -1053,8 +1061,68 @@ final class AppModel: ObservableObject {
         guard let lastUpdated else { return scene }
         return "\(scene) · updated \(lastUpdated.formatted(date: .omitted, time: .shortened))"
     }
-    var hasImageConnection: Bool { hasSavedKey }
-    var usageHelp: String { "Uses OpenAI credit" }
+    var imageDrivers: [ImageDriverDescriptor] { imageGeneration.registry.descriptors }
+    var imageProviderDescriptor: ImageDriverDescriptor? { imageGeneration.registry.descriptor(for: settings.imageProvider) }
+    var imageCopy: ImageGenerationCopy { ImageGenerationCopy(provider: imageProviderDescriptor) }
+    var imageProviderName: String { imageProviderDescriptor?.name ?? "Image provider" }
+    var imageCreditName: String { imageProviderDescriptor?.creditName ?? "your image provider's credit" }
+    var hasImageConnection: Bool { hasSavedKey && (try? imageGeneration.registry.driver(for: settings.imageProvider)) != nil }
+    var usageHelp: String { "Uses \(imageCreditName)" }
+    var imageBillingNotice: String { "\(imageProviderName) bills your account for each new image." }
+
+    func selectImageProvider(_ driverID: String) {
+        guard driverID != settings.imageProvider.driverID, presentation != .crop, !isPreparingForAppUpdate else { return }
+        var updated = settings
+        updated.imageProviderConfigurations[settings.imageProvider.driverID] = settings.imageProvider
+        updated.imageProvider = updated.imageProviderConfigurations[driverID] ?? ImageProviderConfiguration(driverID: driverID)
+        updated.automaticUpdates = false
+        settings = updated
+        stopAutomatic()
+        status = "\(imageProviderName) selected"
+        detail = "Your desktop stays in place. Connect this provider, then use your picture and idea to resume."
+    }
+
+    @discardableResult
+    func saveImageConnection(_ configuration: ImageProviderConfiguration, key: String) -> Bool {
+        guard !isDesignPreview || hourlyServices != nil else { return false }
+        guard presentation != .crop, !isPreparingForAppUpdate else { return false }
+        do {
+            _ = try imageGeneration.registry.driver(for: configuration)
+            let cleaned = key.trimmingCharacters(in: .whitespacesAndNewlines)
+            if cleaned.isEmpty {
+                guard try imageGeneration.credentials.read(for: configuration) != nil else {
+                    throw ImageDriverError.credentialRequired(imageGeneration.registry.descriptor(for: configuration)?.name ?? "image provider")
+                }
+            } else { try imageGeneration.credentials.save(cleaned, for: configuration) }
+            // Replacing a key also invalidates unpaid work for the current connection.
+            desktopSelectionRevision += 1
+            cancelQueue()
+            draftPreviewSettings = nil
+            var updated = settings
+            updated.imageProvider = configuration
+            updated.imageProviderConfigurations[configuration.driverID] = configuration
+            updated.automaticUpdates = false
+            settings = updated
+            stopAutomatic()
+            refreshImageConnection()
+            activity = .idle; recovery = nil
+            status = "\(imageProviderName) connected"
+            detail = "Your desktop stays in place until you use your picture and idea."
+            return true
+        } catch { keyRecoveryMessage = error.localizedDescription; show(error); return false }
+    }
+
+    private func refreshImageConnection() {
+        if isDesignPreview {
+            hasSavedKey = hourlyServices != nil
+            return
+        }
+        do {
+            _ = try imageGeneration.registry.driver(for: settings.imageProvider)
+            hasSavedKey = try imageGeneration.credentials.read(for: settings.imageProvider) != nil
+            keyRecoveryMessage = nil
+        } catch { hasSavedKey = false; keyRecoveryMessage = error.localizedDescription }
+    }
     var canGenerate: Bool {
         !isPreparingForAppUpdate && !isImportingPicture && stagedPictureURL == nil && sourceImageURL != nil && hasImageConnection && remainingGenerations > 0
             && !(selectedPreviewHour == nil && !generationQueue.isCurrentCancelled
@@ -1094,7 +1162,7 @@ final class AppModel: ObservableObject {
         if let generationStorageError { return generationStorageError }
         if hourCache?.hasUnreadableIndex == true { return HourWallpaperCacheError.unreadableIndex.localizedDescription }
         if sourceImageURL == nil { return "Choose a picture first." }
-        if !hasImageConnection { return "Add your OpenAI API key in Settings." }
+        if !hasImageConnection { return keyRecoveryMessage ?? "Connect \(imageProviderName) in Settings." }
         if settings.promptTemplate.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return "Write a prompt first." }
         if remainingGenerations == 0 { return "Today's image limit is reached. Saved wallpapers can still be reused." }
         return nil
@@ -1267,14 +1335,15 @@ final class AppModel: ObservableObject {
         }
 
         do {
-            try KeychainStore.save(cleaned)
+            _ = try imageGeneration.registry.driver(for: settings.imageProvider)
+            try imageGeneration.credentials.save(cleaned, for: settings.imageProvider)
             hasSavedKey = true
             keyRecoveryMessage = nil
             if recovery == .apiKey {
                 activity = .idle
                 recovery = nil
                 status = "Ready to try your new key"
-                detail = "Create a wallpaper when you're ready. " + "OpenAI bills your API key for each new image."
+                detail = "Create a wallpaper when you're ready. " + imageBillingNotice
             }
             return true
         } catch {
@@ -1286,11 +1355,11 @@ final class AppModel: ObservableObject {
     func removeKey() {
         guard !isDesignPreview else { return }
         do {
-            try KeychainStore.remove()
+            try imageGeneration.credentials.remove(for: settings.imageProvider)
             hasSavedKey = false
             stopAutomatic()
             cancelQueue()
-            status = "Add your OpenAI key"
+            status = "Connect \(imageProviderName)"
             recovery = .apiKey
         } catch {
             show(error)
@@ -1318,6 +1387,8 @@ final class AppModel: ObservableObject {
             var restored = previousWallpaperRecipe
             restored.dailyGenerationLimit = settings.dailyGenerationLimit
             restored.quality = settings.quality
+            restored.imageProvider = settings.imageProvider
+            restored.imageProviderConfigurations = settings.imageProviderConfigurations
             settings = restored
             self.previousWallpaperRecipe = nil
             prefersChosenOriginal = false
@@ -1350,7 +1421,7 @@ final class AppModel: ObservableObject {
             activity = .idle
             recovery = nil
             status = "Automatic updates are on"
-            detail = "Checking now, then on your schedule. " + "OpenAI bills your API key for each new image."
+            detail = "Checking now, then on your schedule. " + imageBillingNotice
         }
     }
 
@@ -1384,7 +1455,7 @@ final class AppModel: ObservableObject {
             startAutomatic()
         } else {
             status = "Ready when you are"
-            detail = "Create a wallpaper, or turn on automatic updates. " + "OpenAI bills your API key for each new image."
+            detail = "Create a wallpaper, or turn on automatic updates. " + imageBillingNotice
         }
     }
 
@@ -2096,6 +2167,11 @@ final class AppModel: ObservableObject {
         }
         queue.onError = { [weak self] job, error in
             guard let self else { return }
+            guard job.settings.imageProvider == settings.imageProvider else {
+                if recovery == nil { activity = .idle }
+                refreshSelectedPreview()
+                return
+            }
             if let failure = error as? WallpaperApplicationFailure {
                 applicationRetry = failure.saved
                 persistApplicationRetry()
@@ -2170,17 +2246,13 @@ final class AppModel: ObservableObject {
                     return (ImageStore.uploadURL(for: job.sourcePath, renderProfile: job.renderProfile), size)
                 }.value
                 try Task.checkCancellation()
-                let key: String?
-                do { key = try KeychainStore.read() }
-                catch { keyRecoveryMessage = error.localizedDescription; hasSavedKey = false; throw ImageClientError.invalidKey }
-                guard let key else { hasSavedKey = false; throw ImageClientError.invalidKey }
-                return try await imageClient.edit(sourceURL: uploadURL, prompt: prompt,
-                                                  apiKey: key, model: job.renderProfile.model(for: job.settings),
-                                                  quality: job.renderProfile.quality(for: job.settings), size: size,
-                                                  willSend: { [unowned self] in
-                                                      try await waitForPictureChoice()
-                                                      try willSend()
-                                                  }, didReject: didReject)
+                let request = ImageGenerationRequest(sourceURL: uploadURL, prompt: prompt, size: size,
+                                                     renderProfile: job.renderProfile, settings: job.settings)
+                return try await imageGeneration.generate(request, willSend: { [unowned self] in
+                    try await waitForPictureChoice()
+                    guard job.settings.imageProvider == settings.imageProvider else { throw CancellationError() }
+                    try willSend()
+                }, didReject: didReject)
             },
             reserve: { [unowned self] date in
                 let reservation = imageLedger.reserve(at: date)
@@ -2220,6 +2292,7 @@ final class AppModel: ObservableObject {
             skipped: { [unowned self] job in showSkippedDesktopRequest(hour: job.hour) },
             completed: { [unowned self] job, _, applied in
                 guard job.recipeID == HourWallpaperCache.recipeID(for: liveSettings(for: job), date: pipelineNow) else {
+                    if job.settings.imageProvider != settings.imageProvider && recovery == nil { activity = .idle }
                     refreshSelectedPreview()
                     return
                 }
@@ -2304,7 +2377,7 @@ final class AppModel: ObservableObject {
         do {
             try applySavedWallpaper(saved)
             activity = .idle; recovery = nil; status = "Wallpaper updated"
-            detail = "Applied the saved wallpaper. No new OpenAI request."
+            detail = "Applied the saved wallpaper. No new image request."
             consecutiveFailures = 0; nextRetryAt = .distantPast
             refreshSelectedPreview()
         } catch { show(error); visibleFailureIsApplication = true; scheduleRetry() }
@@ -2603,11 +2676,11 @@ final class AppModel: ObservableObject {
         case is WeatherContextError:
             status = "Weather needs your attention"
             recovery = .weather
-        case ImageClientError.invalidKey:
+        case ImageClientError.invalidKey, ImageClientError.unauthorized, ImageDriverError.credentialRequired:
             status = "Your API key needs attention"
             recovery = .apiKey
-        case ImageClientError.billing:
-            status = "OpenAI credit is unavailable"
+        case ImageClientError.billing, ImageClientError.creditUnavailable:
+            status = "\(imageCreditName.capitalized) is unavailable"
             recovery = .billing
         case is ImageClientError:
             status = "Couldn't create your wallpaper"

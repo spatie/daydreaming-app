@@ -63,15 +63,15 @@ private struct DaydreamingCommands: Commands {
                 .disabled(model.presentation == .crop || !model.onboardingComplete)
             Button("Previous Pictures…") { model.openSavedWallpapers() }
                 .disabled(model.presentation == .crop || !model.onboardingComplete)
-            Button("Create in Codex…") { Task { await model.createInCodex() } }
+            Button("Open Picture & Idea in Codex…") { Task { await model.createInCodex() } }
                 .disabled(model.codexHandoffRequest == nil || model.isPreparingCodexHandoff)
-                .help("Review and send your picture and idea in the Codex app. Automatic updates still use the OpenAI API.")
+                .help("Review and send your picture and idea in the Codex app. Automatic updates use the AI selected in Settings.")
             Button("Crop Picture…") { present(.crop) }
                 .disabled(model.presentation == .crop || !model.onboardingComplete || model.uncroppedImageURL == nil)
             Divider()
             Button("Update Now") { Task { await model.refreshIfNeeded(userInitiated: true) } }
                 .keyboardShortcut("r")
-                .help("Creates a full-quality wallpaper for the current time. Uses OpenAI credit.")
+                .help("Creates a full-quality wallpaper for the current time. Uses \(model.imageCreditName).")
                 .disabled(model.presentation == .crop || !model.canGenerate || model.isMakingCurrentWallpaper || model.stagedPictureURL != nil)
             Toggle("Refresh Wallpaper Automatically", isOn: model.automaticUpdatesMenuBinding)
             .disabled(model.presentation == .crop)
@@ -202,7 +202,7 @@ private struct MenuBarContent: View {
             }
             Divider()
             Button("Update Now") { Task { await model.refreshIfNeeded(userInitiated: true) } }
-                .help("Creates a full-quality wallpaper for the current time. Uses OpenAI credit.")
+                .help("Creates a full-quality wallpaper for the current time. Uses \(model.imageCreditName).")
                 .disabled(model.presentation == .crop || !model.canGenerate || model.isMakingCurrentWallpaper || model.stagedPictureURL != nil)
             Toggle("Refresh Wallpaper Automatically", isOn: model.automaticUpdatesMenuBinding)
             .disabled(model.presentation == .crop)

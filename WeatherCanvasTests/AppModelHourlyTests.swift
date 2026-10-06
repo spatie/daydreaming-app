@@ -4,6 +4,95 @@ import XCTest
 final class AppModelHourlyTests: XCTestCase {
 
     @MainActor
+    func testOldProviderFailureCannotReplaceTheNewConnectionStatus() async throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        fake.creationGate = AppHourlyGate()
+        fake.creationError = ImageClientError.invalidKey
+        let model = fake.model()
+        defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+        await model.refreshIfNeeded(userInitiated: true)
+        await appEventually { fake.created.count == 1 }
+        model.selectImageProvider("compatible")
+        let selectedStatus = model.status
+        fake.creationGate?.release()
+        await appEventually { !model.isGenerating }
+        XCTAssertEqual(model.status, selectedStatus)
+        XCTAssertNil(model.recovery)
+        XCTAssertFalse(model.settings.automaticUpdates)
+        XCTAssertTrue(fake.applied.isEmpty)
+    }
+
+    @MainActor
+    func testSwitchingAIWhileAnUnpaidRequestIsPreparingNeverSendsOrAppliesIt() async throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        fake.beforeSendGate = AppHourlyGate()
+        let model = fake.model()
+        defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+        await model.refreshIfNeeded(userInitiated: true)
+        await appEventually { fake.createPreparations == 1 }
+        let desktop = model.displayedImageURL
+        model.selectImageProvider("compatible")
+        fake.beforeSendGate?.release()
+        await appEventually { !model.isGenerating }
+        XCTAssertTrue(fake.created.isEmpty)
+        XCTAssertTrue(fake.applied.isEmpty)
+        XCTAssertEqual(model.generatedToday, 0)
+        XCTAssertEqual(model.displayedImageURL, desktop)
+        XCTAssertFalse(model.settings.automaticUpdates)
+        XCTAssertFalse(model.hasImageConnection)
+    }
+
+    @MainActor
+    func testSwitchingAIKeepsPaidOldResultCachedWithoutApplyingOrStartingTheNewAI() async throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        fake.creationGate = AppHourlyGate()
+        let model = fake.model()
+        defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+        await model.refreshIfNeeded(userInitiated: true)
+        await appEventually { fake.created.count == 1 }
+        let oldSettings = model.settings
+        let desktop = model.displayedImageURL
+        model.selectImageProvider("compatible")
+        fake.creationGate?.release()
+        await appEventually { !model.isGenerating }
+        XCTAssertEqual(fake.created.count, 1)
+        XCTAssertEqual(model.generatedToday, 1)
+        XCTAssertTrue(fake.applied.isEmpty)
+        XCTAssertEqual(model.displayedImageURL, desktop)
+        let cache = HourWallpaperCache(directory: fake.directory)
+        XCTAssertEqual(cache.entries.count, 1)
+        XCTAssertEqual(cache.entries.first?.settingsSnapshot?.imageProvider, .openAI)
+        model.selectImageProvider("openai")
+        XCTAssertEqual(model.settings.imageProvider, .openAI)
+        XCTAssertNotNil(cache.exact(pictureID: HourWallpaperCache.pictureID(for: oldSettings),
+                                   recipeID: HourWallpaperCache.recipeID(for: oldSettings, date: fake.clock),
+                                   hour: 14, weather: fake.weatherLabel))
+        XCTAssertEqual(fake.created.count, 1)
+    }
+
+    @MainActor
+    func testProviderSwitchRetainsEachConfigurationAndUnknownProvidersNeverGenerate() async throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        let model = fake.model()
+        defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+        let custom = ImageProviderConfiguration(driverID: "compatible", baseURL: "https://images.example/v1", model: "edit-v1", previewModel: "edit-fast")
+        model.settings.imageProvider = custom
+        model.selectImageProvider("openai")
+        model.selectImageProvider("compatible")
+        XCTAssertEqual(model.settings.imageProvider, custom)
+        model.selectImageProvider("future-provider")
+        XCTAssertFalse(model.hasImageConnection)
+        await model.refreshIfNeeded(force: true, userInitiated: true)
+        XCTAssertTrue(fake.created.isEmpty)
+        XCTAssertTrue(fake.applied.isEmpty)
+        XCTAssertEqual(model.generatedToday, 0)
+    }
+
+    @MainActor
     func testChoosingYosemitePreviewsSourceWithoutClaimingDesktopWasChanged() async throws {
         let fake = try AppHourlyFake()
         defer { fake.removeFiles() }

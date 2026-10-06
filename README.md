@@ -1,6 +1,6 @@
 # Daydreaming
 
-Daydreaming is a native SwiftUI and Swift 6 wallpaper app for macOS 26 or newer. Choose a picture, describe how it should change, and use your own OpenAI API key to reimagine it for the time and weather. Your original and its variations stay on this Mac. The repository remains private and unpublished.
+Daydreaming is a native SwiftUI and Swift 6 wallpaper app for macOS 26 or newer. Choose a picture, describe how it should change, and connect an image AI in Settings to reimagine it for the time and weather. OpenAI is the default; compatible image-editing APIs can use the same app flow. Your original and its variations stay on this Mac. The repository remains private and unpublished.
 
 ## Start with a picture
 
@@ -10,7 +10,7 @@ The workspace follows the approved sidebar-and-preview prototype. Choose or drop
 
 **Use This Picture & Idea as Wallpaper** is the decision to put this picture and idea to work. It creates or reuses a matching full-size result for the current hour, applies it, and enables automatic updates. It does not apply the small preview. A newly created wallpaper can differ from its preview. Reusing a matching saved result creates no API request. The confirmation remains available while a preview or wallpaper is being created. Reconfirming an already running picture and idea returns to the current time without creating another image. Pause and Resume stay in the app and menu bar menus.
 
-The five-screen wizard also offers Not Now, which keeps automatic updates paused. Start Daydreaming enables launch at login, disclosed in setup and changeable in Settings. **Run Setup Again…** preserves your picture, instructions, API key, and saved variations while pausing updates and cancelling unpaid waiting work. Reopening setup does not create an image.
+The four-screen wizard also offers Not Now, which keeps automatic updates paused. Start Daydreaming enables launch at login, disclosed in setup and changeable in Settings. **Run Setup Again…** preserves your picture, instructions, API key, and saved variations while pausing updates and cancelling unpaid waiting work. Reopening setup does not create an image.
 
 ## The workspace
 
@@ -83,3 +83,5 @@ See [RELEASING.md](docs/RELEASING.md) for the Developer ID signing, notarization
 See [design.md](docs/design.md) for interaction rules, review workflow, and the pending installed-app checklist. Source review and fixtures do not establish native appearance or successful live generation. No publication or open-source license change is authorized.
 
 The main workspace uses small numbered accents in the app icon's orange, coral, magenta, and blue palette. Translucent landscape panes drift gently behind the controls, with a bounded damped response to moving the window. Motion pauses when the window is hidden, minimized, or inactive, under Reduce Motion or Low Power Mode. Reduce Transparency and Increase Contrast use a solid background. The foreground picture is never tinted by these effects. Previous Pictures uses an icon-only toolbar button with a text accessibility label and help.
+
+Image generation uses a single selected driver. See [image drivers](docs/IMAGE_DRIVERS.md) for connection setup, cache and credential isolation, and adding another provider.

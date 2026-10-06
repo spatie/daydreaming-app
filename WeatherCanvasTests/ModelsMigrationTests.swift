@@ -25,8 +25,9 @@ final class ModelsMigrationTests: XCTestCase {
         XCTAssertEqual(settings.sourcePath, "/tmp/original.jpg")
         XCTAssertEqual(settings.promptTemplate, "Keep the valley warm")
         XCTAssertEqual(settings.dailyGenerationLimit, 5)
+        XCTAssertEqual(settings.imageProvider, .openAI)
         let encoded = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(settings)) as? [String: Any])
-        XCTAssertNil(encoded["imageProvider"])
+        XCTAssertEqual((encoded["imageProvider"] as? [String: Any])?["driverID"] as? String, "openai")
     }
 
     func testMigrationDoesNotAppendAlreadyPresentPrivateOrBlockedHTTPSLinks() {

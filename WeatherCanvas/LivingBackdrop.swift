@@ -34,7 +34,7 @@ struct LogoWindowInertia {
     }
 }
 
-/// Lightweight translucent landscape panes. They never tint the foreground picture.
+/// Soft brand color behind the workspace. The foreground picture stays untouched.
 struct LogoBackdrop: View {
     let isActive: Bool
     let inertia: LogoWindowInertia
@@ -73,39 +73,29 @@ struct LogoBackdrop: View {
 
     private func panes(time: TimeInterval?) -> some View {
         Canvas { context, size in
-            let phase = (time ?? 0) * .pi * 2 / 32
+            // The site's peach, rose and lavender wash, kept behind native controls.
+            let phase = (time ?? 0) * .pi * 2 / 48
             let offset = time.map { inertia.offset(at: $0) } ?? .zero
-            let strength = colorScheme == .dark ? 0.085 : 0.065
-            for index in (0..<4).reversed() {
-                let depth = 0.45 + Double(index) * 0.18
-                let drift = time == nil ? 0 : sin(phase + Double(index) * 0.65) * 6
-                let transform = CGAffineTransform(translationX: offset.width * depth,
-                                                 y: drift + offset.height * depth)
-                let path = pane(size: size, baseline: size.height * (0.14 + Double(index) * 0.21)).applying(transform)
-                let color = DaydreamingPalette.colors[index]
-                context.fill(path, with: .linearGradient(Gradient(colors: [color.opacity(strength), color.opacity(strength * 0.3)]),
-                             startPoint: CGPoint(x: size.width * 0.2, y: 0),
-                             endPoint: CGPoint(x: size.width * 0.8, y: size.height)))
-                // A thin translucent edge separates the logo's overlapping panes.
-                context.stroke(path, with: .color(color.opacity(strength * 0.45)), lineWidth: 0.7)
+            let drift = time == nil ? 0 : sin(phase) * 5
+            let strength = colorScheme == .dark ? 0.14 : 0.34
+            let colors = [Color(red: 0.97, green: 0.79, blue: 0.44),
+                          Color(red: 0.95, green: 0.64, blue: 0.65),
+                          Color(red: 0.66, green: 0.64, blue: 0.93)]
+            let centers = [CGPoint(x: size.width * 0.05, y: size.height * 0.03),
+                           CGPoint(x: size.width * 0.65, y: size.height * 0.45),
+                           CGPoint(x: size.width * 0.8, y: size.height * 1.04)]
+            for index in colors.indices {
+                let center = CGPoint(x: centers[index].x + offset.width * 0.5,
+                                     y: centers[index].y + drift + offset.height * 0.5)
+                context.fill(Path(CGRect(origin: .zero, size: size)),
+                             with: .radialGradient(Gradient(colors: [colors[index].opacity(strength),
+                                                                    colors[index].opacity(0)]),
+                                                   center: center, startRadius: 0,
+                                                   endRadius: max(size.width, size.height) * 0.85))
             }
         }
     }
 
-    private func pane(size: CGSize, baseline: CGFloat) -> Path {
-        let width = size.width, thickness = size.height * 0.29
-        var path = Path()
-        path.move(to: CGPoint(x: -width * 0.06, y: baseline + size.height * 0.09))
-        path.addCurve(to: CGPoint(x: width * 1.06, y: baseline + size.height * 0.012),
-                      control1: CGPoint(x: width * 0.26, y: baseline),
-                      control2: CGPoint(x: width * 0.66, y: baseline - size.height * 0.02))
-        path.addLine(to: CGPoint(x: width * 1.06, y: baseline + size.height * 0.012 + thickness))
-        path.addCurve(to: CGPoint(x: -width * 0.06, y: baseline + size.height * 0.09 + thickness),
-                      control1: CGPoint(x: width * 0.66, y: baseline - size.height * 0.02 + thickness),
-                      control2: CGPoint(x: width * 0.26, y: baseline + thickness))
-        path.closeSubpath()
-        return path
-    }
 }
 
 struct CreationStepHeading: View {

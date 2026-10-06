@@ -198,6 +198,8 @@ struct CanvasSettings: Codable, Equatable, Sendable {
     var weatherChoice: WeatherChoice = .automatic
     var model: ImageModel = .precise
     var quality: ImageQuality = .high
+    var imageProvider: ImageProviderConfiguration = .openAI
+    var imageProviderConfigurations: [String: ImageProviderConfiguration] = [:]
     var reuseMatchingImages = true
     var automaticUpdates = false
     var dailyGenerationLimit = 24
@@ -236,7 +238,7 @@ struct CanvasSettings: Codable, Equatable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case sourcePath, uncroppedSourcePath, sourceCrop, sourceDigest, originalPictureDigest, pictureName, promptTemplate, style, extraInstructions, legacyCustomPrompt, interval, customMinutes
-        case weatherChoice, model, quality, reuseMatchingImages, automaticUpdates
+        case weatherChoice, model, quality, imageProvider, imageProviderConfigurations, reuseMatchingImages, automaticUpdates
         case dailyGenerationLimit, promptFileBookmarks, unresolvedPromptFiles, contextSources
     }
 
@@ -278,6 +280,13 @@ struct CanvasSettings: Codable, Equatable, Sendable {
         weatherChoice = try values.decodeIfPresent(WeatherChoice.self, forKey: .weatherChoice) ?? .automatic
         model = try values.decodeIfPresent(ImageModel.self, forKey: .model) ?? .precise
         quality = try values.decodeIfPresent(ImageQuality.self, forKey: .quality) ?? .high
+        if let legacy = try? values.decode(String.self, forKey: .imageProvider) {
+            // Retired experimental settings used a string. Preserve the prior migration.
+            imageProvider = ["codex", "openAIAPI"].contains(legacy) ? .openAI : .init(driverID: legacy)
+        } else {
+            imageProvider = try values.decodeIfPresent(ImageProviderConfiguration.self, forKey: .imageProvider) ?? .openAI
+        }
+        imageProviderConfigurations = try values.decodeIfPresent([String: ImageProviderConfiguration].self, forKey: .imageProviderConfigurations) ?? [:]
         reuseMatchingImages = try values.decodeIfPresent(Bool.self, forKey: .reuseMatchingImages) ?? true
         automaticUpdates = try values.decodeIfPresent(Bool.self, forKey: .automaticUpdates) ?? false
         dailyGenerationLimit = try values.decodeIfPresent(Int.self, forKey: .dailyGenerationLimit) ?? 24
@@ -331,6 +340,8 @@ struct CanvasSettings: Codable, Equatable, Sendable {
         try values.encode(weatherChoice, forKey: .weatherChoice)
         try values.encode(model, forKey: .model)
         try values.encode(quality, forKey: .quality)
+        try values.encode(imageProvider, forKey: .imageProvider)
+        try values.encode(imageProviderConfigurations, forKey: .imageProviderConfigurations)
         try values.encode(reuseMatchingImages, forKey: .reuseMatchingImages)
         try values.encode(automaticUpdates, forKey: .automaticUpdates)
         try values.encode(dailyGenerationLimit, forKey: .dailyGenerationLimit)

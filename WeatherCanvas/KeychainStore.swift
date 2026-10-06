@@ -118,6 +118,7 @@ struct APIKeyStore {
 
 @MainActor
 enum KeychainStore {
+    private static var providerStores: [String: APIKeyStore] = [:]
     private static let store: APIKeyStore = {
         let namespace = KeychainNamespace(bundleID: Bundle.main.bundleIdentifier)
         // The restricted entitlement stays opt-in until a provisioning profile is available.
@@ -134,6 +135,26 @@ enum KeychainStore {
     static func read() throws -> String? { try store.read() }
     static func save(_ key: String) throws { try store.save(key) }
     static func remove() throws { try store.remove() }
+
+    static func read(provider: ImageProviderConfiguration) throws -> String? { try providerStore(provider).read() }
+    static func save(_ key: String, provider: ImageProviderConfiguration) throws { try providerStore(provider).save(key) }
+    static func remove(provider: ImageProviderConfiguration) throws { try providerStore(provider).remove() }
+
+    private static func providerStore(_ provider: ImageProviderConfiguration) -> APIKeyStore {
+        if provider.credentialID == "openai" { return store }
+        if let existing = providerStores[provider.credentialID] { return existing }
+        let namespace = KeychainNamespace(bundleID: Bundle.main.bundleIdentifier, providerID: provider.credentialID)
+        let enabled = Bundle.main.object(forInfoDictionaryKey: "KeychainUsesDataProtection") as? String == "YES"
+        let marker = "imageCredentialRemoved." + provider.credentialID
+        let migration = namespace.allowsAccess
+            ? KeychainMigrationState(removed: UserDefaults.standard.bool(forKey: marker),
+                                     persistRemoval: { UserDefaults.standard.set($0, forKey: marker) })
+            : KeychainMigrationState()
+        let result = APIKeyStore(namespace: namespace, backend: SecurityKeychainBackend(),
+                                storage: enabled ? .dataProtection : .legacy, migration: migration)
+        providerStores[provider.credentialID] = result
+        return result
+    }
 }
 
 struct SecurityKeychainBackend: KeychainBackend {

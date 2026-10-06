@@ -52,7 +52,7 @@ struct SavedWallpapersView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(alignment: .leading, spacing: 8) {
                 if !groups.isEmpty {
-                    Text(AppCopy.historyChoiceNotice)
+                    Text(model.imageCopy.historyChoiceNotice)
                         .font(.caption).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -63,7 +63,7 @@ struct SavedWallpapersView: View {
                         Button("Choose Picture & Idea") { chooseOriginal() }
                             .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
                             .disabled(!canChoose)
-                            .help("Restores this picture and its idea. \(AppCopy.historyChoiceNotice) \(AppCopy.usePictureAndIdeaAsWallpaper) starts desktop updates.")
+                            .help("Restores this picture and its idea. \(model.imageCopy.historyChoiceNotice) \(AppCopy.usePictureAndIdeaAsWallpaper) starts desktop updates.")
                     }
                 }
             }

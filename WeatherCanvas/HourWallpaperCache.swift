@@ -51,6 +51,7 @@ struct HourWallpaperCache: Sendable {
         ]
 
         if let crop = settings.sourceCrop { parts.append(cropFingerprint(crop)) }
+        if let provider = settings.imageProvider.cacheIdentity { parts.append(provider) }
         if settings.promptTemplate.contains("{{date}}") || !PromptLinkDetector.urls(in: settings.promptTemplate).isEmpty
             || LocalPromptFileDetector.allPaths(in: settings.promptTemplate).contains(where: { PromptFileReader.isSupported(URL(fileURLWithPath: $0)) }) {
             parts.append(String(Calendar.current.startOfDay(for: date).timeIntervalSince1970))
@@ -63,6 +64,7 @@ struct HourWallpaperCache: Sendable {
                      settings.model.rawValue, settings.quality.rawValue, settings.weatherChoice.rawValue]
 
         if let crop = settings.sourceCrop { parts.append(cropFingerprint(crop)) }
+        if let provider = settings.imageProvider.cacheIdentity { parts.append(provider) }
         return digest(parts.joined(separator: "\u{0}"))
     }
 

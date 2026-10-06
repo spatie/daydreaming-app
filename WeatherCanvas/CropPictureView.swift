@@ -17,6 +17,7 @@ struct CropPictureView: View {
     var initialCrop: PictureCrop? = nil
     var onClose: (@MainActor () -> Void)? = nil
     var usesSubtleBackdrop = true
+    var imageCopy = ImageGenerationCopy(provider: .openAI)
     let onSave: @MainActor (PictureCrop) async throws -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -58,7 +59,7 @@ struct CropPictureView: View {
             if showsControls {
                 VStack(alignment: .leading, spacing: 8) {
                     if showsActions {
-                        Text(AppCopy.cropDoneNotice(hasChanges: hasChanges))
+                        Text(imageCopy.cropDoneNotice(hasChanges: hasChanges))
                             .font(.caption).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -277,7 +278,7 @@ struct CropPictureView: View {
         }
         .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
         .disabled(image == nil || isSaving)
-        .help(AppCopy.cropDoneNotice(hasChanges: hasChanges))
+        .help(imageCopy.cropDoneNotice(hasChanges: hasChanges))
     }
 
     private func close() {

@@ -74,7 +74,7 @@ struct OnboardingView: View {
                 Spacer()
                 VStack(alignment: .trailing, spacing: 8) {
                     if step == 3 && model.onboardingWeatherReady {
-                        Text("Creates your first wallpaper now. OpenAI bills your API key for each new image.")
+                        Text("Creates your first wallpaper now. \(model.imageBillingNotice)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.trailing)
@@ -188,9 +188,9 @@ struct OnboardingView: View {
                         .font(.largeTitle.weight(.semibold))
                     Text("Daydreaming keeps your favorite picture as your wallpaper and gently reimagines it through the day: at sunrise, in the rain, under snow, at night.")
                         .foregroundStyle(.secondary)
-                    Text("Pick a picture. Connect OpenAI. Your local weather does the rest.")
+                    Text("Pick a picture. Connect your image AI. Your local weather does the rest.")
                         .foregroundStyle(.secondary)
-                    Text("New wallpapers use your own OpenAI API key. OpenAI bills you for each new image.")
+                    Text("New wallpapers use your own image AI connection. \(model.imageBillingNotice)")
                         .font(.caption).foregroundStyle(.secondary)
                 case 1:
                     Text("Choose Your Picture")
@@ -221,7 +221,7 @@ struct OnboardingView: View {
                 case 2:
                     Text("A little imagination, powered by AI.")
                         .font(.title.weight(.semibold))
-                    Text("OpenAI creates a new version of your picture for the time of day and the weather.")
+                    Text("\(model.imageProviderName) creates a new version of your picture for the time of day and the weather.")
                         .foregroundStyle(.secondary)
                     Text("“Adjust this image for the time of day and the local weather.”")
                         .font(.callout).italic()
@@ -232,14 +232,14 @@ struct OnboardingView: View {
                         Label("API key saved", systemImage: "checkmark.circle")
                             .font(.callout)
                     }
-                    SecureField("Paste your OpenAI API key", text: $key)
+                    SecureField("Paste your \(model.imageProviderName) API key", text: $key)
                         .textFieldStyle(.roundedBorder)
                         .focused($keyFocused)
-                        .accessibilityLabel("OpenAI API key")
-                    Link("Get an API Key", destination: URL(string: "https://platform.openai.com/api-keys")!)
+                        .accessibilityLabel("\(model.imageProviderName) API key")
+                    if let url = model.imageProviderDescriptor?.manageKeysURL { Link("Get an API Key", destination: url) }
                     Text("Your key stays in Keychain.")
                         .font(.caption).foregroundStyle(.secondary)
-                    Text("New wallpapers use OpenAI credit.")
+                    Text("New wallpapers use \(model.imageCreditName).")
                         .font(.caption).foregroundStyle(.secondary)
 
                 default:
