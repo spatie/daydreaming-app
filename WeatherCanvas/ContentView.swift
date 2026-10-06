@@ -266,19 +266,20 @@ struct ContentView: View {
                 Image(systemName: model.workspaceWeather?.symbol ?? "cloud")
                     .foregroundStyle(.secondary).accessibilityHidden(true)
                 if let weather = model.workspaceWeather {
-                    Text("\(model.settings.weatherChoice == .automatic ? "Now" : "Fixed weather") · \(weather.label.capitalized)")
+                    Text("Now · \(weather.label.capitalized)")
                         .foregroundStyle(.secondary).lineLimit(1)
                 } else {
-                    Button("Choose weather…") {
-                        commitPrompt(generatesDraft: false)
-                        model.presentation = .customize
-                    }.buttonStyle(.borderless)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Local weather unavailable").foregroundStyle(.secondary)
+                        Button("Allow Location…") {
+                            commitPrompt(generatesDraft: false)
+                            model.requestLocalWeatherAccess()
+                        }.buttonStyle(.borderless)
+                    }
                 }
             }
             .font(.caption)
-            .help(model.settings.weatherChoice == .automatic
-                  ? "Weather data: MET Norway (CC BY 4.0), using your approximate location."
-                  : "This is the weather you chose in Customize, rather than live local weather.")
+            .help("Weather data: MET Norway (CC BY 4.0), using your approximate location.")
             .task(id: model.settings.weatherChoice) { await model.refreshWorkspaceWeather() }
             .onChange(of: timeline.date) { _, _ in Task { await model.refreshWorkspaceWeather() } }
         }
@@ -762,6 +763,7 @@ struct ContentView: View {
 
     private func recoveryTitle(_ recovery: WallpaperRecovery) -> String {
         if recovery == .apiKey && !model.hasImageConnection { return "Add API Key…" }
+        if recovery == .weather { return "Allow Location…" }
         return recovery.title
     }
 
@@ -770,7 +772,7 @@ struct ContentView: View {
         switch recovery {
         case .image: model.presentation = .picture
         case .retry: model.retryUpdate()
-        case .weather: customizeWidth = min(500, max(320, workspaceSize.width)); model.presentation = .customize
+        case .weather: model.requestLocalWeatherAccess()
         case .apiKey: openSettings()
         case .billing: NSWorkspace.shared.open(URL(string: "https://platform.openai.com/settings/organization/billing/overview")!)
                 }

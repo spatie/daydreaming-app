@@ -258,9 +258,11 @@ final class AppModel: ObservableObject {
         } else {
             settings = CanvasSettings()
         }
+        useLocalWeather()
 
         if let data = UserDefaults.standard.data(forKey: "previousWallpaperRecipeBeforePictureChoice") {
             previousWallpaperRecipe = try? JSONDecoder().decode(CanvasSettings.self, from: data)
+            previousWallpaperRecipe?.weatherChoice = .automatic
         }
         do { hasSavedKey = try KeychainStore.read() != nil }
         catch { keyRecoveryMessage = error.localizedDescription }
@@ -605,6 +607,7 @@ final class AppModel: ObservableObject {
             updated.originalPictureDigest = original.digest
             updated.pictureName = stagedPictureName
             updated.sourceCrop = crop
+            updated.weatherChoice = .automatic
             let instructions = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
             updated.promptTemplate = instructions.isEmpty ? CanvasSettings.defaultPrompt : instructions
             updated.legacyCustomPrompt = updated.promptTemplate
@@ -1097,7 +1100,11 @@ final class AppModel: ObservableObject {
     }
 
     var onboardingWeatherReady: Bool {
-        settings.weatherChoice != .automatic || onboardingLocationState == .allowed
+        onboardingLocationState == .allowed
+    }
+
+    func useLocalWeather() {
+        if settings.weatherChoice != .automatic { settings.weatherChoice = .automatic }
     }
 
     func refreshOnboardingLocation() {
@@ -1106,8 +1113,8 @@ final class AppModel: ObservableObject {
         onboardingLocationState = OnboardingLocationPolicy.updated(onboardingLocationState, authorization: locationReader.authorizationStatus)
     }
 
-    func requestOnboardingLocation() {
-        settings.weatherChoice = .automatic
+    func requestLocalWeatherAccess() {
+        useLocalWeather()
         if isDesignPreview { onboardingLocationState = .allowed; return }
         switch locationReader.authorizationStatus {
         case .denied, .restricted:
@@ -1120,11 +1127,6 @@ final class AppModel: ObservableObject {
                 onboardingLocationState = .allowed
             }
         }
-    }
-
-    func skipOnboardingLocation(choice: WeatherChoice = .clear) {
-        settings.weatherChoice = choice == .automatic ? .clear : choice
-        onboardingLocationState = .notRequested
     }
 
     func importImage(_ selectedURL: URL) {
@@ -1297,6 +1299,7 @@ final class AppModel: ObservableObject {
         presentation = nil
         backToNow()
         onboardingLocationState = .notRequested
+        useLocalWeather()
         onboardingComplete = false
         status = "Ready for setup"
         detail = ""
@@ -1308,7 +1311,8 @@ final class AppModel: ObservableObject {
     }
 
     func finishOnboarding(createFirstWallpaper: Bool = true) {
-        guard !isImportingPicture, sourceImageURL != nil, hasImageConnection, onboardingWeatherReady else { return }
+        guard !isImportingPicture, sourceImageURL != nil, hasImageConnection,
+              !createFirstWallpaper || onboardingWeatherReady else { return }
         onboardingComplete = true
         if createFirstWallpaper {
             if !isDesignPreview { setLaunchAtLogin(true) }

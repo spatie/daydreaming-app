@@ -5,7 +5,6 @@ struct CustomizeView: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.dismiss) private var dismiss
     @State private var style: WallpaperStyle = .natural
-    @State private var weather: WeatherChoice = .automatic
 
     var body: some View {
         VStack(spacing: 0) {
@@ -14,19 +13,9 @@ struct CustomizeView: View {
                     Picker("Style", selection: $style) {
                         ForEach(WallpaperStyle.allCases) { Text($0.title).tag($0) }
                     }
-
                 }
-                Section("Time and Weather") {
-                    Picker("Weather", selection: $weather) {
-                        ForEach(WeatherChoice.allCases) { choice in
-                            Label(choice == .automatic ? "Local Weather" : choice.title, systemImage: choice.symbol).tag(choice)
-                        }
-                    }
-                    if weather == .automatic {
-                        Text("Uses your approximate location.")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                }
+                LabeledContent("Weather", value: "Local weather")
+                    .help("Uses your approximate location to fetch the local forecast from MET Norway.")
             }
             .formStyle(.grouped)
             Text("Links and files in your instructions are read before each new wallpaper and their text is sent to OpenAI.")
@@ -40,22 +29,21 @@ struct CustomizeView: View {
                 Button("Done", action: save)
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)
-                    .help("Saves your changes and creates a draft using OpenAI credit.")
+                    .help("Saves your style and makes a preview. New images use OpenAI credit.")
             }
             .padding(20)
         }
         .frame(width: width)
-        .frame(minHeight: 340, idealHeight: 390, maxHeight: 400)
+        .frame(minHeight: 260, idealHeight: 300, maxHeight: 340)
         .onAppear {
             style = model.settings.style
-            weather = model.settings.weatherChoice
         }
     }
 
     private func save() {
         var settings = model.settings
         settings.style = style
-        settings.weatherChoice = weather
+        settings.weatherChoice = .automatic
         model.settings = settings
         dismiss()
         model.schedulePreviewGeneration(hour: model.selectedPreviewHour ?? Calendar.current.component(.hour, from: .now))

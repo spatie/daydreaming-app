@@ -1102,7 +1102,6 @@ final class AppModelHourlyTests: XCTestCase {
         await model.refreshIfNeeded(force: true, userInitiated: true)
         XCTAssertFalse(model.isPreviewGenerationScheduled)
         XCTAssertTrue(fake.created.isEmpty)
-        model.skipOnboardingLocation(choice: .clear)
         model.finishOnboarding(createFirstWallpaper: false)
         XCTAssertTrue(model.onboardingComplete)
         XCTAssertFalse(model.settings.automaticUpdates)

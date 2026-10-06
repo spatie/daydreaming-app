@@ -8,19 +8,17 @@ struct OnboardingView: View {
     @State private var step = 0
     @State private var key = ""
     @State private var error: String?
-    @State private var choosingFixedWeather = false
-    @State private var fixedWeather: WeatherChoice = .clear
     @FocusState private var keyFocused: Bool
 
-    private let steps = ["Welcome", "Your picture", "Image creation", "Your weather", "Ready"]
+    private let steps = ["Welcome", "Your picture", "Image creation", "Ready"]
     private var primaryTitle: String {
-        if step == 4 { return "Start Daydreaming" }
         if step == 1 && model.isBuiltInPictureChosen { return "Continue with Yosemite" }
-        if step == 3 && !model.onboardingWeatherReady {
+        if step == 3 {
+            if model.onboardingWeatherReady { return "Start Daydreaming" }
             switch model.onboardingLocationState {
             case .notRequested: return "Allow Location Access"
             case .denied: return "Open System Settings"
-            case .requesting, .allowed: return "Continue"
+            case .requesting, .allowed: return "Start Daydreaming"
             }
         }
         return "Continue"
@@ -31,8 +29,8 @@ struct OnboardingView: View {
         case 0: true
         case 1: model.sourceImageURL != nil
         case 2: model.hasSavedKey || !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        case 3: model.onboardingWeatherReady || model.onboardingLocationState == .notRequested || model.onboardingLocationState == .denied
-        default: model.canGenerate && model.onboardingWeatherReady
+        default: model.onboardingWeatherReady ? model.canGenerate
+            : model.onboardingLocationState == .notRequested || model.onboardingLocationState == .denied
         }
     }
 
@@ -68,14 +66,14 @@ struct OnboardingView: View {
                     Button("Back") { move(to: step - 1) }
                         .keyboardShortcut("[", modifiers: .command)
                 }
-                if step == 4 {
+                if step == 3 {
                     Button("Not Now") { model.finishOnboarding(createFirstWallpaper: false) }
                         .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 8) {
-                    if step == 4 {
+                    if step == 3 && model.onboardingWeatherReady {
                         Text("Creates your first wallpaper now. OpenAI bills your API key for each new image.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -92,11 +90,8 @@ struct OnboardingView: View {
             .padding(22)
         }
         .onAppear {
+            model.useLocalWeather()
             model.useBuiltInPicture(replaceCurrent: false)
-            if model.settings.weatherChoice != .automatic {
-                fixedWeather = model.settings.weatherChoice
-                choosingFixedWeather = true
-            }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             if step == 3 { model.refreshOnboardingLocation() }
@@ -193,7 +188,7 @@ struct OnboardingView: View {
                         .font(.largeTitle.weight(.semibold))
                     Text("Daydreaming keeps your favorite picture as your wallpaper and gently reimagines it through the day: at sunrise, in the rain, under snow, at night.")
                         .foregroundStyle(.secondary)
-                    Text("Pick a picture. Connect OpenAI. Allow local weather. That's it.")
+                    Text("Pick a picture. Connect OpenAI. Your local weather does the rest.")
                         .foregroundStyle(.secondary)
                     Text("New wallpapers use your own OpenAI API key. OpenAI bills you for each new image.")
                         .font(.caption).foregroundStyle(.secondary)
@@ -247,18 +242,15 @@ struct OnboardingView: View {
                     Text("New wallpapers use OpenAI credit.")
                         .font(.caption).foregroundStyle(.secondary)
 
-                case 3:
-                    weatherContent
                 default:
                     Text("Ready to follow the day.")
                         .font(.largeTitle.weight(.semibold))
-                    Text(model.settings.weatherChoice == .automatic
-                         ? "Your picture changes through the day, shaped by your local weather."
-                         : "Your picture changes through the day with \(fixedWeatherDescription) weather.")
+                    Text("Your picture changes through the day, shaped by your local weather.")
                         .foregroundStyle(.secondary)
+                    locationStatus
                     Text("Starts at login and updates every screen while Daydreaming is open. You can change this in Settings. Your original stays saved.")
                         .foregroundStyle(.secondary)
-                    if !canContinue, let reason = model.generationUnavailableReason {
+                    if model.onboardingWeatherReady && !canContinue, let reason = model.generationUnavailableReason {
                         Label(reason, systemImage: "info.circle")
                             .font(.callout).foregroundStyle(.secondary)
                     }
@@ -276,70 +268,35 @@ struct OnboardingView: View {
     }
 
     @ViewBuilder
-    private var weatherContent: some View {
-        Text("Bring the weather outside in.")
-            .font(.largeTitle.weight(.semibold))
-        Text("Local weather uses your approximate location to find a forecast. Daydreaming shares rounded coordinates with MET Norway.")
-            .foregroundStyle(.secondary)
-        if choosingFixedWeather {
-            Picker("Wallpaper Weather", selection: $fixedWeather) {
-                ForEach(WeatherChoice.allCases.filter { $0 != .automatic }) { choice in
-                    Label(choice.title, systemImage: choice.symbol).tag(choice)
-                }
-            }
-            .onChange(of: fixedWeather) { _, choice in model.skipOnboardingLocation(choice: choice) }
-            Text("Fixed weather works without location access.")
+    private var locationStatus: some View {
+        switch model.onboardingLocationState {
+        case .notRequested:
+            Text("Local weather needs your approximate location. Daydreaming shares rounded coordinates with MET Norway. macOS will ask for permission next.")
                 .font(.caption).foregroundStyle(.secondary)
-            Button("Use Local Weather") {
-                choosingFixedWeather = false
-                model.requestOnboardingLocation()
-            }
-        } else {
-            switch model.onboardingLocationState {
-            case .notRequested:
-                Text("macOS will ask for permission next. You can choose the weather yourself instead.")
-                    .font(.caption).foregroundStyle(.secondary)
-            case .requesting:
-                ProgressView("Waiting for location access…")
-            case .allowed:
-                Label("Local weather is ready", systemImage: "checkmark.circle")
-            case .denied:
-                Label("Location access is off", systemImage: "location.slash")
-                Text("Allow access in System Settings, or choose fixed weather below.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            Button("Skip and Choose the Weather Myself") {
-                choosingFixedWeather = true
-                model.skipOnboardingLocation(choice: fixedWeather)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
-        }
-    }
-
-    private var fixedWeatherDescription: String {
-        switch model.settings.weatherChoice {
-        case .automatic: "local"
-        case .clear: "clear"
-        case .cloudy: "cloudy"
-        case .rain: "rainy"
-        case .storm: "stormy"
-        case .snow: "snowy"
-        case .fog: "foggy"
+        case .requesting:
+            ProgressView("Waiting for location access…").controlSize(.small)
+        case .allowed:
+            Label("Local weather is ready", systemImage: "checkmark.circle")
+                .font(.callout)
+        case .denied:
+            Label("Location access is off", systemImage: "location.slash")
+                .font(.callout)
+            Text("Allow Daydreaming in System Settings → Privacy & Security → Location Services, then return here.")
+                .font(.caption).foregroundStyle(.secondary)
         }
     }
 
     private func advance() {
         error = nil
         if step == 3 && !model.onboardingWeatherReady {
-            model.requestOnboardingLocation()
+            model.requestLocalWeatherAccess()
             return
         }
         if step == 2 && !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             guard model.saveKey(key) else { error = model.detail; return }
             key = ""
         }
-        if step == 4 {
+        if step == 3 {
             model.finishOnboarding()
         } else {
             move(to: step + 1)

@@ -16,17 +16,17 @@ Crop keeps the sidebar and preview workspace intact. The original moves under a 
 
 Vertical scrolling over the artwork browses the selected original's saved variations, newest first, without generating, applying, changing settings or cancelling queued work. Momentum is ignored and trackpad steps are rate-limited. A Saved caption identifies the hour, day and position, and Back to Live or Escape exits. The slider and idea editor also exit saved browsing. VoiceOver adjustable actions and focused-picture arrow keys browse the same saved set.
 
-The sidebar weather row says Now for live MET Norway conditions and Fixed weather for a selected condition. It is independent of the saved or future hour on the canvas. Display refreshes use the existing provider's forecast cache, at most once per 15 minutes while active, without new permission requests or paid work. Missing weather offers Customize through Choose weather.
+The weather row says Now for the local MET Norway forecast, independently of the previewed hour. Display refreshes use the existing cache at most once per 15 minutes while active, without paid work. Missing weather offers an explicit location-access action.
 
 ## Setup and preferences
 
-Setup has five screens: welcome, picture, image creation, weather, and ready. Welcome shows locally drawn variations of the bundled photograph. Yosemite Valley is preselected and credited to NPS Photo / C. Jacoby, with provenance in [yosemite-picture.md](yosemite-picture.md).
+Setup has four screens: welcome, picture, image creation, and ready. Welcome shows locally drawn variations of the bundled photograph. Yosemite Valley is preselected and credited to NPS Photo / C. Jacoby, with provenance in [yosemite-picture.md](yosemite-picture.md).
 
-Saving a key does not validate it through a network request. Weather explains approximate location before the person requests macOS permission, offers fixed weather, and recovers when permission is enabled in System Settings. Ready is the creation decision and discloses OpenAI billing. Start Daydreaming creates the first wallpaper, enables automatic updates, and turns on launch at login, disclosed on that screen. Not Now finishes with updates paused.
+Saving a key does not validate it through a network request. Ready explains approximate-location sharing with MET Norway and requests native location permission when needed. Denied access offers System Settings. Weather is always local. Not Now finishes setup with updates paused and makes no image, including when location access is unavailable.
 
 Run Setup Again… preserves the source, instructions, API key, and saved pictures. It pauses updates, withdraws unpaid waiting work, and returns to Welcome. Reopening setup creates nothing. It is unavailable during creation.
 
-Customize contains style, weather, and schedule. Cancel preserves existing settings. Done saves them and requests one guarded quick preview. Its visible privacy footnote explains that links and files in instructions are read and sent to OpenAI. Settings contains only app-level preferences: launch at login, menu bar visibility, API key, quality, daily limit, and storage. Selling, license, activation, and feature-tier code is removed. The repository remains private; third-party notices remain, and no open-source license or publication is authorized.
+Customize contains style. Weather always uses the local forecast, and the schedule stays in step 3. Cancel preserves existing settings. Done saves them and requests one guarded quick preview. Its visible privacy footnote explains that links and files in instructions are read and sent to OpenAI. Settings contains only app-level preferences: launch at login, menu bar visibility, API key, quality, daily limit, and storage. Selling, license, activation, and feature-tier code is removed. The repository remains private; third-party notices remain, and no open-source license or publication is authorized.
 
 ## Queue, payment, and application
 

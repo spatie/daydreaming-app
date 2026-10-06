@@ -266,14 +266,15 @@ final class DaydreamingTests: XCTestCase {
     }
 
     @MainActor
-    func testOnboardingWeatherIsExplicitAndCanBeSkipped() {
+    func testOnboardingUsesLocalWeatherAndRequiresLocationBeforeCreation() {
         let model = AppModel()
         XCTAssertEqual(model.onboardingLocationState, .notRequested)
         XCTAssertFalse(model.onboardingWeatherReady)
-        model.skipOnboardingLocation(choice: .rain)
-        XCTAssertTrue(model.onboardingWeatherReady)
-        XCTAssertEqual(model.settings.weatherChoice, .rain)
-        model.requestOnboardingLocation()
+        model.settings.weatherChoice = .rain
+        model.useLocalWeather()
+        XCTAssertFalse(model.onboardingWeatherReady)
+        XCTAssertEqual(model.settings.weatherChoice, .automatic)
+        model.requestLocalWeatherAccess()
         XCTAssertEqual(model.onboardingLocationState, .allowed)
         XCTAssertEqual(model.settings.weatherChoice, .automatic)
     }
