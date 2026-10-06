@@ -202,10 +202,6 @@ private struct MenuBarContent: View {
                 SettingsWindowController.show(model: model)
             }
             Divider()
-            if let feedback = model.menuUpdateStatus {
-                Text(feedback)
-                    .help(model.detail)
-            }
             Button("Update Now") { Task { await model.refreshIfNeeded(userInitiated: true) } }
                 .help("Creates a full-quality wallpaper for the current time. Uses \(model.imageCreditName).")
                 .disabled(model.presentation == .crop || !model.canGenerate || model.isMakingCurrentWallpaper || model.stagedPictureURL != nil)
@@ -219,7 +215,9 @@ private struct MenuBarContent: View {
         Divider()
         Button("Quit Daydreaming") { NSApp.terminate(nil) }
         Divider()
-        Text(model.lastGenerationMenuLabel).disabled(true)
+        Text(model.menuUpdateStatus ?? "Ready when you are")
+            .help([model.detail, model.lastGenerationMenuLabel].filter { !$0.isEmpty }.joined(separator: "\n"))
+            .disabled(true)
     }
 
     private func present(_ presentation: MainPresentation) {

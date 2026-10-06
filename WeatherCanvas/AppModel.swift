@@ -1094,8 +1094,11 @@ final class AppModel: ObservableObject {
         }
         if isMakingCurrentWallpaper { return "Wallpaper update queued…" }
         if let queueStatus { return queueStatus }
-        if status == "Wallpaper updated", let lastUpdated {
+        if let lastUpdated {
             return "Wallpaper updated at \(lastUpdated.formatted(date: .omitted, time: .shortened))"
+        }
+        if let lastImageGeneratedAt {
+            return "Preview created at \(lastImageGeneratedAt.formatted(date: .omitted, time: .shortened))"
         }
         return nil
     }
