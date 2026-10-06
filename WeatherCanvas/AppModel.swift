@@ -1496,6 +1496,22 @@ final class AppModel: ObservableObject {
         return true
     }
 
+    /// Skipping setup never creates an image or changes the desktop.
+    func skipOnboarding() {
+        guard !isImportingPicture, !isCheckingImageConnection else { return }
+        stopAutomatic()
+        onboardingComplete = true
+        status = "Ready when you are"
+        detail = ""
+    }
+
+    var mainWindowWarning: String? {
+        if let message = keyRecoveryMessage { return message }
+        if !hasImageConnection { return "Connect your image AI in Settings to make previews and wallpapers." }
+        if activity == .failed { return detail.isEmpty ? status : detail }
+        return nil
+    }
+
     func finishOnboarding(createFirstWallpaper: Bool = true) {
         guard !isImportingPicture, sourceImageURL != nil, hasImageConnection,
               !createFirstWallpaper || onboardingWeatherReady else { return }

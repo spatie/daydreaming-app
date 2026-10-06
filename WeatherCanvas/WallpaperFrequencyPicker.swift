@@ -20,7 +20,7 @@ struct WallpaperFrequencyPicker: View {
                     }
                 }
                 .labelsHidden().pickerStyle(.menu)
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 if model.settings.interval == .custom {
                     Button("Edit…", action: editCustom).buttonStyle(.borderless).font(.caption)
                 }

@@ -16,7 +16,9 @@ enum DesignSnapshot {
         let directory = URL(fileURLWithPath: args[index + 1], isDirectory: true)
         let stateIndex = args.firstIndex(of: "-design-preview")!
         var state = args[stateIndex + 1]
-        if let settings = args.firstIndex(of: "-preview-settings"), args.indices.contains(settings + 1) {
+        if args.contains("-preview-about") { state = "about" }
+        else if args.contains("-preview-submit-prompt") { state = "submit-prompt" }
+        else if let settings = args.firstIndex(of: "-preview-settings"), args.indices.contains(settings + 1) {
             state = "settings-" + args[settings + 1]
         } else if let presentation = args.firstIndex(of: "-preview-presentation"), args.indices.contains(presentation + 1) {
             state += "-" + args[presentation + 1]
@@ -28,7 +30,10 @@ enum DesignSnapshot {
             var capturedWindow: NSWindow?
             for _ in 0..<10 {
                 try? await Task.sleep(for: .milliseconds(500))
-                let window = args.contains("-preview-settings")
+                let communityID = args.contains("-preview-about") ? "daydreaming.about" : args.contains("-preview-submit-prompt") ? "daydreaming.submit-prompt" : nil
+                let window = communityID != nil
+                    ? NSApp.windows.first(where: { $0.identifier?.rawValue == communityID && $0.isVisible })
+                    : args.contains("-preview-settings")
                     ? NSApp.windows.first(where: { $0.identifier?.rawValue == "daydreaming.settings" && $0.isVisible })
                     : NSApp.keyWindow ?? NSApp.windows.first(where: { $0.isVisible && $0.canBecomeMain })
                 if let window {

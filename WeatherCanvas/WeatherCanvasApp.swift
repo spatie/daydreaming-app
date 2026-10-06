@@ -44,6 +44,15 @@ private struct DaydreamingCommands: Commands {
     @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
+        CommandGroup(replacing: .appInfo) {
+            Button("About Daydreaming") { CommunityWindowController.showAbout() }
+        }
+        CommandGroup(replacing: .help) {
+            Button("Daydreaming Help") { NSWorkspace.shared.open(URL(string: "https://getdaydreaming.com/support")!) }
+            Button("Submit a Prompt…") { CommunityWindowController.showSubmission() }
+            Divider()
+            Button("Send Us a Postcard…") { CommunityWindowController.showAbout(postcard: true) }
+        }
         CommandGroup(replacing: .appSettings) {
             Button("Settings…") { SettingsWindowController.show(model: model) }
                 .keyboardShortcut(",")

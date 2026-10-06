@@ -49,6 +49,11 @@ struct OnboardingView: View {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Step \(step + 1) of \(steps.count): \(steps[step])")
 
+            if step == 0 {
+                welcome
+                    .padding(28)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 24) {
                     artwork.frame(minWidth: 220, minHeight: 200)
@@ -61,9 +66,14 @@ struct OnboardingView: View {
             }
             .padding(24)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
 
             Divider()
             HStack(alignment: .bottom, spacing: 16) {
+                Button("Skip Setup") { connectionTask?.cancel(); model.skipOnboarding() }
+                    .buttonStyle(.plain).foregroundStyle(.secondary)
+                    .disabled(model.isCheckingImageConnection)
+                    .help("Open Daydreaming without creating an image. Connect your image AI later in Settings.")
                 if step > 0 {
                     Button("Back") { move(to: step - 1) }
                         .disabled(model.isCheckingImageConnection)
@@ -102,84 +112,49 @@ struct OnboardingView: View {
         .onDisappear { connectionTask?.cancel() }
     }
 
+    private var welcome: some View {
+        VStack(spacing: 18) {
+            Text("See your picture in a new light.")
+                .font(.system(size: 32, weight: .medium, design: .serif))
+                .multilineTextAlignment(.center)
+            Text("Daydreaming uses AI to match your picture to the time and local weather, then sets it as your Mac wallpaper.")
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 490)
+            GeometryReader { geometry in
+                HStack(spacing: 0) {
+                    welcomeImage("WelcomeDay", label: "Day")
+                    welcomeImage("WelcomeNight", label: "Night")
+                }
+                .frame(width: geometry.size.width, height: geometry.size.height)
+                .clipShape(.rect(cornerRadius: 16))
+            }
+            .frame(maxWidth: 640, maxHeight: 280)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("The same Yosemite picture in daylight and at night. An example of how Daydreaming changes your wallpaper.")
+            Text("New images use your AI account's credit.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    private func welcomeImage(_ resource: String, label: String) -> some View {
+        GeometryReader { geometry in
+            BundledCommunityImage(resource: resource, fileExtension: "jpg").scaledToFill()
+                .frame(width: geometry.size.width, height: geometry.size.height).clipped()
+                .overlay(alignment: .bottomLeading) {
+                    Text(label).font(.caption.weight(.semibold)).foregroundStyle(.white)
+                        .padding(.horizontal, 10).padding(.vertical, 5)
+                        .background(.black.opacity(0.45), in: .capsule).padding(12)
+                }
+        }
+    }
+
     @ViewBuilder
     private var artwork: some View {
-        if step == 0 {
-            VStack(spacing: 10) {
-                HStack(spacing: 10) {
-                    illustration("Morning")
-                    illustration("Rain")
-                }
-                HStack(spacing: 10) {
-                    illustration("Snow")
-                    illustration("Night")
-                }
-                Text("A preview of how your picture could change.")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-        } else if let url = model.sourceImageURL {
+        if let url = model.sourceImageURL {
             WallpaperPreview(url: url, label: "Your chosen picture")
         } else {
-            ContentUnavailableView("Choose Your Picture", systemImage: "photo.artframe")
-        }
-    }
-
-    private func illustration(_ title: String) -> some View {
-        VStack(spacing: 5) {
-            WallpaperPreview(url: model.builtInPictureURL, label: "\(title) illustration", fillsFrame: true)
-                .overlay {
-                    illustrationOverlay(title)
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
-                }
-                .clipShape(.rect(cornerRadius: 12))
-            Text(title).font(.caption).foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    private func illustrationOverlay(_ title: String) -> some View {
-        Canvas { context, size in
-            let bounds = Path(CGRect(origin: .zero, size: size))
-            switch title {
-            case "Morning":
-                context.fill(bounds, with: .linearGradient(
-                    Gradient(colors: [.orange.opacity(0.55), .yellow.opacity(0.18), .clear]),
-                    startPoint: CGPoint(x: 0, y: 0), endPoint: CGPoint(x: size.width, y: size.height)
-                ))
-            case "Rain":
-                for index in 0..<36 {
-                    let x = CGFloat((index * 37) % 100) / 100 * size.width
-                    let y = CGFloat((index * 61) % 100) / 100 * size.height
-                    var streak = Path()
-                    streak.move(to: CGPoint(x: x, y: y))
-                    streak.addLine(to: CGPoint(x: x - 5, y: y + 15))
-                    context.stroke(streak, with: .color(.white.opacity(0.6)), lineWidth: 1)
-                }
-            case "Snow":
-                context.fill(bounds, with: .color(.white.opacity(0.28)))
-                for index in 0..<44 {
-                    let x = CGFloat((index * 37) % 100) / 100 * size.width
-                    let y = CGFloat((index * 61) % 100) / 100 * size.height
-                    let radius = CGFloat(2 + index % 3)
-                    let flake = Path(ellipseIn: CGRect(x: x, y: y, width: radius, height: radius))
-                    context.fill(flake, with: .color(.white.opacity(0.9)))
-                }
-            default:
-                context.fill(bounds, with: .linearGradient(
-                    Gradient(colors: [.indigo.opacity(0.45), .black.opacity(0.2)]),
-                    startPoint: .zero, endPoint: CGPoint(x: 0, y: size.height)
-                ))
-                for index in 0..<24 {
-                    let x = CGFloat((index * 37) % 100) / 100 * size.width
-                    let y = CGFloat((index * 61) % 60) / 100 * size.height
-                    let radius = CGFloat(1 + index % 2)
-                    let star = Path(ellipseIn: CGRect(x: x, y: y, width: radius, height: radius))
-                    context.fill(star, with: .color(.white.opacity(0.9)))
-                }
-            }
+            ContentUnavailableView("Choose your picture", systemImage: "photo.artframe")
         }
     }
 
@@ -187,15 +162,6 @@ struct OnboardingView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 switch step {
-                case 0:
-                    Text("A favorite picture. A changing day.")
-                        .font(.largeTitle.weight(.semibold))
-                    Text("Daydreaming keeps your favorite picture as your wallpaper and gently reimagines it through the day: at sunrise, in the rain, under snow, at night.")
-                        .foregroundStyle(.secondary)
-                    Text("Pick a picture. Connect your image AI. Your local weather does the rest.")
-                        .foregroundStyle(.secondary)
-                    Text("New wallpapers use your own image AI connection. \(model.imageBillingNotice)")
-                        .font(.caption).foregroundStyle(.secondary)
                 case 1:
                     Text("Choose Your Picture")
                         .font(.largeTitle.weight(.semibold))

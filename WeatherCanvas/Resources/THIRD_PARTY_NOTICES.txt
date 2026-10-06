@@ -179,3 +179,10 @@ HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
 IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
+
+WelcomeDay.jpg and WelcomeNight.jpg
+AI-created examples of Yosemite Valley, reused from getdaydreaming.com.
+They illustrate Daydreaming's transformations and are not the original NPS photograph.
+
+MakerFlare.png, MakerMailcoach.png and MakerThereThere.png
+Product marks used with Spatie's permission from the Bloom application resources.

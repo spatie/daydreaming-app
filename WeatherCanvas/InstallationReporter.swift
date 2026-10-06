@@ -171,6 +171,7 @@ final class InstallationReporter {
         request.timeoutInterval = 10
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Daydreaming/\(metadata.appVersion)", forHTTPHeaderField: "User-Agent")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.httpBody = try encoder.encode(payload)
         return request

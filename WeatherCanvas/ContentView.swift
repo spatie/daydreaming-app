@@ -179,6 +179,8 @@ struct ContentView: View {
                    Bundle.main.bundleIdentifier?.hasPrefix("be.spatie.daydreaming.preview") == true {
                     SettingsWindowController.show(model: model, pane: SettingsPane(rawValue: args[index + 1]) ?? .general)
                 }
+                if args.contains("-preview-about") { CommunityWindowController.showAbout() }
+                if args.contains("-preview-submit-prompt") { CommunityWindowController.showSubmission() }
                 DesignSnapshot.captureIfRequested()
             }
             #endif
@@ -526,8 +528,8 @@ struct ContentView: View {
             }.buttonStyle(.borderedProminent).help(error)
         } else if let recovery = model.recovery, model.activity == .failed && !model.isGenerating {
             Button(recoveryTitle(recovery)) { recover(recovery) }.buttonStyle(.borderedProminent)
-        } else if hasPicture && !model.hasImageConnection {
-            Button("Add API Key…") { SettingsWindowController.show(model: model, pane: .imageAI) }.buttonStyle(.borderedProminent)
+        } else if !model.hasImageConnection {
+            Button("Connect Image AI…") { SettingsWindowController.show(model: model, pane: .imageAI) }.buttonStyle(.borderedProminent)
         } else if hasPicture { useWallpaperButton }
     }
 
@@ -541,6 +543,13 @@ struct ContentView: View {
             }
         } else if model.isBrowsingSavedVariations {
             Text("Browsing saved variations").font(.callout).foregroundStyle(.secondary)
+        } else if let warning = model.mainWindowWarning {
+            Label(warning, systemImage: "exclamationmark.triangle")
+                .font(.callout).foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(10).frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.orange.opacity(0.1), in: .rect(cornerRadius: 8))
+                .accessibilityLabel("Warning: \(warning)")
         } else if let warning = model.sourceWarning {
             Text(warning).font(.caption).foregroundStyle(.secondary).lineLimit(2)
             Button { model.dismissSourceWarning() } label: { Image(systemName: "xmark") }
@@ -759,7 +768,7 @@ struct ContentView: View {
     }
 
     private func recoveryTitle(_ recovery: WallpaperRecovery) -> String {
-        if recovery == .apiKey && !model.hasImageConnection { return "Add API Key…" }
+        if recovery == .apiKey { return "Connect Image AI…" }
         if recovery == .weather { return "Allow Location…" }
         if recovery == .billing { return "Check Provider Billing…" }
         return recovery.title

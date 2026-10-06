@@ -4,6 +4,58 @@ import XCTest
 final class AppModelHourlyTests: XCTestCase {
 
     @MainActor
+    func testSkippingWelcomeNeedsNoKeyOrPictureAndCreatesNothing() {
+        let model = AppModel()
+        defer { model.stopBackgroundTasks() }
+        model.onboardingComplete = false
+        model.settings.sourcePath = nil
+        XCTAssertFalse(model.hasImageConnection)
+        model.skipOnboarding()
+        XCTAssertTrue(model.onboardingComplete)
+        XCTAssertFalse(model.settings.automaticUpdates)
+        XCTAssertNotNil(model.mainWindowWarning)
+        XCTAssertFalse(model.isGenerating)
+        XCTAssertFalse(model.hasMenuActivity)
+    }
+
+    @MainActor
+    func testSkippingConnectedSetupDoesNotCreateOrApplyAnImage() async throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        let model = fake.model()
+        defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+        model.onboardingComplete = false
+        let original = model.settings.sourcePath
+        let idea = model.settings.promptTemplate
+        model.skipOnboarding()
+        await Task.yield()
+        XCTAssertTrue(model.onboardingComplete)
+        XCTAssertFalse(model.settings.automaticUpdates)
+        XCTAssertEqual(model.settings.sourcePath, original)
+        XCTAssertEqual(model.settings.promptTemplate, idea)
+        XCTAssertTrue(fake.created.isEmpty)
+        XCTAssertTrue(fake.applied.isEmpty)
+        XCTAssertNil(model.mainWindowWarning)
+    }
+
+    @MainActor
+    func testMainWindowShowsLatestFailureAndClearsItAfterSuccess() async throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        let model = fake.model()
+        defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+        XCTAssertNil(model.mainWindowWarning)
+        fake.creationError = URLError(.notConnectedToInternet)
+        await model.refreshIfNeeded(force: true, userInitiated: true)
+        await appEventually { fake.created.count == 1 && !model.isGenerating }
+        XCTAssertNotNil(model.mainWindowWarning)
+        fake.creationError = nil
+        await model.refreshIfNeeded(force: true, userInitiated: true)
+        await appEventually { fake.applied.count == 1 && !model.isGenerating }
+        XCTAssertNil(model.mainWindowWarning)
+    }
+
+    @MainActor
     func testMenuFeedbackAppearsWhileUpdateIsPreparingAndAfterItApplies() async throws {
         let fake = try AppHourlyFake()
         defer { fake.removeFiles() }

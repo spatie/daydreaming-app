@@ -10,11 +10,13 @@
 		052D82676410EAC1C2C203D7 /* DreamingArtwork.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9B9B0F153A83F84FA17BC0F3 /* DreamingArtwork.metal */; };
 		0934AEDAE4A4A75A888BA7DF /* LivingBackdropTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 151675FE61EB88E5C021393C /* LivingBackdropTests.swift */; };
 		0C354417CD5F261BF4B177A1 /* PreviewWaitingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE38597092AEA5172D199F84 /* PreviewWaitingView.swift */; };
+		0CD73CD868D6900E55BCA54D /* PromptSubmissionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CD8074A4DDD8E081C5028C3 /* PromptSubmissionTests.swift */; };
 		0E8A0CC82E9710B9C1DDC4F6 /* AppModelHourlyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBDE7979919E5E31A79CEFCD /* AppModelHourlyTests.swift */; };
 		0E9ECAC870AD52AFE97141E1 /* DesignAlternatives.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB0ABFD1C861AEB39C5CD157 /* DesignAlternatives.swift */; };
 		16339C38BDB00BDEF4916EE4 /* WallpaperController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED8E3A44181D36388F80E192 /* WallpaperController.swift */; };
 		1978A81B04A2FF7CD391D48F /* HourWallpaperCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99DC8F5A9E5FB44DA339221B /* HourWallpaperCache.swift */; };
 		199EE295FBAB724770424FFD /* WallpaperPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = C706991E141CF84D86622751 /* WallpaperPreview.swift */; };
+		19AE3B9DE219A0572CB73F88 /* WelcomeNight.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 37A8C55A26F515C21B815925 /* WelcomeNight.jpg */; };
 		1A1CD4DDB4677867D7FD6D3F /* HourlyGenerationProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19C3775E6E6243F58C97B6C0 /* HourlyGenerationProcessor.swift */; };
 		24D3F97040ECA891DE208CE9 /* CropPictureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 018F39EF5EE3551FA68B4B2F /* CropPictureView.swift */; };
 		27528403DFEFD570105E9009 /* AppModelHourlyServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97BFFE483977E7192F8CF5F2 /* AppModelHourlyServices.swift */; };
@@ -22,6 +24,7 @@
 		28ED443CD9F191F620F8E7E9 /* ImageConnectionSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8824B23E2F61BA62C31620BF /* ImageConnectionSettingsView.swift */; };
 		2F64C8E518AF2752854ECD5B /* ImageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8AB3606E87DF87DF83E9322 /* ImageStore.swift */; };
 		32B2E787275731C1C6073D9D /* InstallationReporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29D6337F1DBCD426A20D2843 /* InstallationReporterTests.swift */; };
+		339A27656BECD0DC34DBE881 /* MakerFlare.png in Resources */ = {isa = PBXBuildFile; fileRef = B38D6F814A3DA357FF2B5CAB /* MakerFlare.png */; };
 		3424BA599B9BE26A4446ECC7 /* PromptContextReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BA8D84C0184CE2905D5B26D /* PromptContextReader.swift */; };
 		3438D44E2EFAD7169F09B6DC /* Daydreaming.icon in Resources */ = {isa = PBXBuildFile; fileRef = F3E6A204CDF6FBB91BB51F33 /* Daydreaming.icon */; };
 		358FA88116DFDD91DD9C07C2 /* AppModelPromptSourceServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E7035D484BAF28C8CCFA7A5 /* AppModelPromptSourceServices.swift */; };
@@ -44,6 +47,7 @@
 		6D54C8412224A1D8E6059596 /* HourWallpaperCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46D98B87F17F008055AEBA6B /* HourWallpaperCacheTests.swift */; };
 		6F3F671546496185832D5351 /* WeatherCanvasApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C7F9FD42719F78CB0F0CE8 /* WeatherCanvasApp.swift */; };
 		725F904A9917B1001D406494 /* SavedWallpaperGridNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCE9DDEF2D5A8995A2DE084F /* SavedWallpaperGridNavigationTests.swift */; };
+		7346176D6063A5F1191D2480 /* PromptSubmission.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2CFD4D5476A22D610DC686C /* PromptSubmission.swift */; };
 		75FE633DB6D699D2099FB440 /* CodexLegacyCleanupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB11C1FB7E07E7392C195D5A /* CodexLegacyCleanupTests.swift */; };
 		776C3C4037A7FB7A072564FA /* PromptContextReaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6EB174CE4EA91168CA6A33B /* PromptContextReaderTests.swift */; };
 		79E9EC3A52DF40584FA88B35 /* YosemiteValley.jpg in Resources */ = {isa = PBXBuildFile; fileRef = B65F596773DAA5C552998014 /* YosemiteValley.jpg */; };
@@ -51,6 +55,7 @@
 		7B1787BC8C74B46DF1AF92E4 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 286489A72A6FCD900F2EE8A3 /* SettingsView.swift */; };
 		7B4E30B3DCF5E0DC14D4760B /* InstallationReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B51BAC3A7B013B11C2E2035 /* InstallationReporter.swift */; };
 		7BE948BC4B204A21F4DAB536 /* SliderInteractionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9E2FE566DF19585C6BE5B08 /* SliderInteractionPolicy.swift */; };
+		7DBAC2E75CA8917B159EDE83 /* MakerThereThere.png in Resources */ = {isa = PBXBuildFile; fileRef = 3074BDB81B772B42E4A2F710 /* MakerThereThere.png */; };
 		822DEA40B8520996D2345C8B /* AppCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF1479585063EDEB30035888 /* AppCopy.swift */; };
 		82B6E0EB3BA30D54A82DE72A /* PictureCrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81611A0CE8C3EAB8B0D66CE3 /* PictureCrop.swift */; };
 		8699D6445FE2C1DF891E4562 /* PromptEditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDAE6CC55F00EBD5CBC86879 /* PromptEditorTests.swift */; };
@@ -71,15 +76,18 @@
 		AF03FDD1D17A14AF44B487E3 /* UpdaterManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68D548E33592C84D1E724CEC /* UpdaterManager.swift */; };
 		B3AA70A8492626A42AB09428 /* PictureCropTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 072EF5B5BFDB8B72F69A3262 /* PictureCropTests.swift */; };
 		B7FF320F9F920CFE60582F3A /* PromptRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00754A6FD83E3C34C0264ECE /* PromptRenderer.swift */; };
+		B9DE87A34F6ADBB466F33B93 /* WelcomeDay.jpg in Resources */ = {isa = PBXBuildFile; fileRef = FDCF0485E9305DBC11C25C3E /* WelcomeDay.jpg */; };
 		BC6CFCD88A992A290E50AFC3 /* ModelsMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3AAF90B21FB1AF3871098D3 /* ModelsMigrationTests.swift */; };
 		C1C0027C99AB782CE200A591 /* ImageGenerationDriverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14809B8D79A538BFE3509B49 /* ImageGenerationDriverTests.swift */; };
 		C224E87E0589E1C6D2AB4847 /* CustomizeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5396C71E879AF483D5370BE2 /* CustomizeView.swift */; };
 		C62F7B9B4AEDA2816092ACDD /* WallpaperFrequencyPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA79BDA7F4F3FE0A42D4C802 /* WallpaperFrequencyPicker.swift */; };
 		C75A067AC987055814048B38 /* SliderInteractionPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 804DD82DBFD3FDC7AC2346F9 /* SliderInteractionPolicyTests.swift */; };
 		CB698BE72DD5AF8292820E6F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CC83AE7DA50FCA04C1A75354 /* Assets.xcassets */; };
+		CEF5963E2C1E0144DA28A31F /* CommunityWindows.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C8A5B600B8771418BC17757 /* CommunityWindows.swift */; };
 		D12D8DC7F242F55D7554406F /* CodexHandoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2C54D2250BF5B8925FB12B4 /* CodexHandoff.swift */; };
 		DA02CFAAB8362413C05C5508 /* HourlyWeatherForecastTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B93C096F3188305AF885B0BA /* HourlyWeatherForecastTests.swift */; };
 		DA03D1D9D07BDD952A881991 /* GenerationRenderProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65B3F926976203A616C9EADE /* GenerationRenderProfileTests.swift */; };
+		DB6D8C333CCBCDD00D5810A7 /* MakerMailcoach.png in Resources */ = {isa = PBXBuildFile; fileRef = 7D48361C3BC2E2413E8EF75E /* MakerMailcoach.png */; };
 		E1C2830BF0DFA79B18CA0BB3 /* WallpaperWindowGeometryBoundaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 117E2150EA54CB1B96F9CAB1 /* WallpaperWindowGeometryBoundaryTests.swift */; };
 		E776753128AA09E2FA195983 /* LivingBackdrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D136A784FF6027FF880ABD1 /* LivingBackdrop.swift */; };
 		EA109CAF496320E65A5C0C4F /* DreamingArtwork.swift in Sources */ = {isa = PBXBuildFile; fileRef = D445AAA98D5D733BCBBF3BBA /* DreamingArtwork.swift */; };
@@ -116,15 +124,19 @@
 		286489A72A6FCD900F2EE8A3 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		28AA4E61931C3F763BC0BDEC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		29D6337F1DBCD426A20D2843 /* InstallationReporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstallationReporterTests.swift; sourceTree = "<group>"; };
+		3074BDB81B772B42E4A2F710 /* MakerThereThere.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = MakerThereThere.png; sourceTree = "<group>"; };
 		33920C4CB951A721C04D4261 /* OpenAIImageClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIImageClientTests.swift; sourceTree = "<group>"; };
+		37A8C55A26F515C21B815925 /* WelcomeNight.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = WelcomeNight.jpg; sourceTree = "<group>"; };
 		38AA54DF513C5104A82FBB74 /* PictureHistoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PictureHistoryTests.swift; sourceTree = "<group>"; };
 		3AFEDC35D3C8B6A79DD812B4 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		46D98B87F17F008055AEBA6B /* HourWallpaperCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HourWallpaperCacheTests.swift; sourceTree = "<group>"; };
 		4914305878E8B25AFC801FE1 /* WeatherCanvas.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WeatherCanvas.entitlements; sourceTree = "<group>"; };
+		4CD8074A4DDD8E081C5028C3 /* PromptSubmissionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptSubmissionTests.swift; sourceTree = "<group>"; };
 		52D0AE49DA40C684B9EB22F6 /* WeatherCanvas.data-protection.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "WeatherCanvas.data-protection.entitlements"; sourceTree = "<group>"; };
 		5307898918455D82C1AB7D7D /* PromptFilesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptFilesTests.swift; sourceTree = "<group>"; };
 		53571FD4F04F2AE07450EF3D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		5396C71E879AF483D5370BE2 /* CustomizeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomizeView.swift; sourceTree = "<group>"; };
+		5C8A5B600B8771418BC17757 /* CommunityWindows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommunityWindows.swift; sourceTree = "<group>"; };
 		61C2CFFF9E31A332C5590B2B /* WallpaperWindowGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperWindowGeometry.swift; sourceTree = "<group>"; };
 		61F586141A213C5927971238 /* SavedWallpapersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedWallpapersView.swift; sourceTree = "<group>"; };
 		65B3F926976203A616C9EADE /* GenerationRenderProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerationRenderProfileTests.swift; sourceTree = "<group>"; };
@@ -135,6 +147,7 @@
 		775A9D8FECBD3C878BB34658 /* UpdaterPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdaterPolicyTests.swift; sourceTree = "<group>"; };
 		7B51BAC3A7B013B11C2E2035 /* InstallationReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstallationReporter.swift; sourceTree = "<group>"; };
 		7D136A784FF6027FF880ABD1 /* LivingBackdrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LivingBackdrop.swift; sourceTree = "<group>"; };
+		7D48361C3BC2E2413E8EF75E /* MakerMailcoach.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = MakerMailcoach.png; sourceTree = "<group>"; };
 		804DD82DBFD3FDC7AC2346F9 /* SliderInteractionPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SliderInteractionPolicyTests.swift; sourceTree = "<group>"; };
 		81611A0CE8C3EAB8B0D66CE3 /* PictureCrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PictureCrop.swift; sourceTree = "<group>"; };
 		8824B23E2F61BA62C31620BF /* ImageConnectionSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageConnectionSettingsView.swift; sourceTree = "<group>"; };
@@ -153,6 +166,7 @@
 		AB11C1FB7E07E7392C195D5A /* CodexLegacyCleanupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexLegacyCleanupTests.swift; sourceTree = "<group>"; };
 		AECA495A5C18529C654246FC /* DaydreamingTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DaydreamingTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AF0AD4EAB7BB5E90031F24D5 /* Daydreaming.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Daydreaming.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B38D6F814A3DA357FF2B5CAB /* MakerFlare.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = MakerFlare.png; sourceTree = "<group>"; };
 		B65F596773DAA5C552998014 /* YosemiteValley.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = YosemiteValley.jpg; sourceTree = "<group>"; };
 		B76CD2F23A3EA798A7EDBCD1 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
 		B93C096F3188305AF885B0BA /* HourlyWeatherForecastTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HourlyWeatherForecastTests.swift; sourceTree = "<group>"; };
@@ -167,6 +181,7 @@
 		CE21760621510BDB893A2346 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		D2443740B24068E4A1601382 /* PictureHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PictureHistory.swift; sourceTree = "<group>"; };
 		D2C54D2250BF5B8925FB12B4 /* CodexHandoff.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexHandoff.swift; sourceTree = "<group>"; };
+		D2CFD4D5476A22D610DC686C /* PromptSubmission.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptSubmission.swift; sourceTree = "<group>"; };
 		D445AAA98D5D733BCBBF3BBA /* DreamingArtwork.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DreamingArtwork.swift; sourceTree = "<group>"; };
 		D510784071616AEDB603E4E7 /* WallpaperControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperControllerTests.swift; sourceTree = "<group>"; };
 		DB0ABFD1C861AEB39C5CD157 /* DesignAlternatives.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignAlternatives.swift; sourceTree = "<group>"; };
@@ -182,6 +197,7 @@
 		F3E6A204CDF6FBB91BB51F33 /* Daydreaming.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = Daydreaming.icon; sourceTree = "<group>"; };
 		F6E963DE640C874249A78F56 /* SavedWallpaper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedWallpaper.swift; sourceTree = "<group>"; };
 		F8AB3606E87DF87DF83E9322 /* ImageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageStore.swift; sourceTree = "<group>"; };
+		FDCF0485E9305DBC11C25C3E /* WelcomeDay.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = WelcomeDay.jpg; sourceTree = "<group>"; };
 		FFA0A370BC1745A59CA9F4DD /* OpenAIImageClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIImageClient.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -211,7 +227,12 @@
 			isa = PBXGroup;
 			children = (
 				F3E6A204CDF6FBB91BB51F33 /* Daydreaming.icon */,
+				B38D6F814A3DA357FF2B5CAB /* MakerFlare.png */,
+				7D48361C3BC2E2413E8EF75E /* MakerMailcoach.png */,
+				3074BDB81B772B42E4A2F710 /* MakerThereThere.png */,
 				6BB94D2CB6FFB1D62A508057 /* THIRD_PARTY_NOTICES.txt */,
+				FDCF0485E9305DBC11C25C3E /* WelcomeDay.jpg */,
+				37A8C55A26F515C21B815925 /* WelcomeNight.jpg */,
 				B65F596773DAA5C552998014 /* YosemiteValley.jpg */,
 			);
 			path = Resources;
@@ -228,6 +249,7 @@
 				CC83AE7DA50FCA04C1A75354 /* Assets.xcassets */,
 				D2C54D2250BF5B8925FB12B4 /* CodexHandoff.swift */,
 				EE5A857D65E834A5CB7024D6 /* CodexLegacyCleanup.swift */,
+				5C8A5B600B8771418BC17757 /* CommunityWindows.swift */,
 				53571FD4F04F2AE07450EF3D /* ContentView.swift */,
 				8B96D7A8AFCA41A08F5BDFE1 /* ContextSource.swift */,
 				018F39EF5EE3551FA68B4B2F /* CropPictureView.swift */,
@@ -258,6 +280,7 @@
 				A360860F7AED42BA8B4F321B /* PromptFileAuthorization.swift */,
 				9FCF00F66590E19AC7126F68 /* PromptFiles.swift */,
 				00754A6FD83E3C34C0264ECE /* PromptRenderer.swift */,
+				D2CFD4D5476A22D610DC686C /* PromptSubmission.swift */,
 				F6E963DE640C874249A78F56 /* SavedWallpaper.swift */,
 				61F586141A213C5927971238 /* SavedWallpapersView.swift */,
 				286489A72A6FCD900F2EE8A3 /* SettingsView.swift */,
@@ -309,6 +332,7 @@
 				E6EB174CE4EA91168CA6A33B /* PromptContextReaderTests.swift */,
 				EDAE6CC55F00EBD5CBC86879 /* PromptEditorTests.swift */,
 				5307898918455D82C1AB7D7D /* PromptFilesTests.swift */,
+				4CD8074A4DDD8E081C5028C3 /* PromptSubmissionTests.swift */,
 				DCE9DDEF2D5A8995A2DE084F /* SavedWallpaperGridNavigationTests.swift */,
 				804DD82DBFD3FDC7AC2346F9 /* SliderInteractionPolicyTests.swift */,
 				775A9D8FECBD3C878BB34658 /* UpdaterPolicyTests.swift */,
@@ -412,7 +436,12 @@
 			files = (
 				CB698BE72DD5AF8292820E6F /* Assets.xcassets in Resources */,
 				3438D44E2EFAD7169F09B6DC /* Daydreaming.icon in Resources */,
+				339A27656BECD0DC34DBE881 /* MakerFlare.png in Resources */,
+				DB6D8C333CCBCDD00D5810A7 /* MakerMailcoach.png in Resources */,
+				7DBAC2E75CA8917B159EDE83 /* MakerThereThere.png in Resources */,
 				8FBB3A183D802B99C3CED020 /* THIRD_PARTY_NOTICES.txt in Resources */,
+				B9DE87A34F6ADBB466F33B93 /* WelcomeDay.jpg in Resources */,
+				19AE3B9DE219A0572CB73F88 /* WelcomeNight.jpg in Resources */,
 				79E9EC3A52DF40584FA88B35 /* YosemiteValley.jpg in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -466,6 +495,7 @@
 				776C3C4037A7FB7A072564FA /* PromptContextReaderTests.swift in Sources */,
 				8699D6445FE2C1DF891E4562 /* PromptEditorTests.swift in Sources */,
 				6A1BFAFAA6B1882B5DCF11B3 /* PromptFilesTests.swift in Sources */,
+				0CD73CD868D6900E55BCA54D /* PromptSubmissionTests.swift in Sources */,
 				725F904A9917B1001D406494 /* SavedWallpaperGridNavigationTests.swift in Sources */,
 				C75A067AC987055814048B38 /* SliderInteractionPolicyTests.swift in Sources */,
 				F1552996C6EFDBDF38C01818 /* UpdaterPolicyTests.swift in Sources */,
@@ -486,6 +516,7 @@
 				8EFE3945D5D4E92C35FA56A1 /* AppRuntime.swift in Sources */,
 				D12D8DC7F242F55D7554406F /* CodexHandoff.swift in Sources */,
 				91F896E7741D6E1C3AF82D55 /* CodexLegacyCleanup.swift in Sources */,
+				CEF5963E2C1E0144DA28A31F /* CommunityWindows.swift in Sources */,
 				3DEE752177EC1850579218C1 /* ContentView.swift in Sources */,
 				9271E77B96BAF6DE2342380F /* ContextSource.swift in Sources */,
 				24D3F97040ECA891DE208CE9 /* CropPictureView.swift in Sources */,
@@ -515,6 +546,7 @@
 				F23514BC0D6EBBE152061013 /* PromptFileAuthorization.swift in Sources */,
 				A3664CFAD006CDF3F0D79905 /* PromptFiles.swift in Sources */,
 				B7FF320F9F920CFE60582F3A /* PromptRenderer.swift in Sources */,
+				7346176D6063A5F1191D2480 /* PromptSubmission.swift in Sources */,
 				6D3B4ADF4707E2F6DB1F8BAB /* SavedWallpaper.swift in Sources */,
 				515B8CD3AB5C04ADABAD04D1 /* SavedWallpapersView.swift in Sources */,
 				7B1787BC8C74B46DF1AF92E4 /* SettingsView.swift in Sources */,
@@ -634,7 +666,7 @@
 				CODE_SIGN_IDENTITY = "Developer ID Application";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DAYDREAMING_BUILD_CHANNEL = release;
 				DAYDREAMING_DATA_PROTECTION_KEYCHAIN = NO;
 				DAYDREAMING_SPARKLE_PUBLIC_KEY = "ClbZzJEHvApUetl1Ej1lXqmInXzGjJEwvd2YDrFK2+4=";
@@ -716,7 +748,7 @@
 				CODE_SIGN_IDENTITY = "Developer ID Application";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DAYDREAMING_BUILD_CHANNEL = local;
 				DAYDREAMING_DATA_PROTECTION_KEYCHAIN = NO;
 				DAYDREAMING_SPARKLE_PUBLIC_KEY = "ClbZzJEHvApUetl1Ej1lXqmInXzGjJEwvd2YDrFK2+4=";

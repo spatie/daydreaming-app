@@ -57,6 +57,7 @@ final class InstallationReporterTests: XCTestCase {
         XCTAssertEqual(request.url?.absoluteString, "https://getdaydreaming.com/api/install-reports")
         XCTAssertEqual(request.httpMethod, "POST")
         XCTAssertEqual(request.timeoutInterval, 10)
+        XCTAssertEqual(request.value(forHTTPHeaderField: "User-Agent"), "Daydreaming/1.2.3")
         XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
         XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
         let body = try XCTUnwrap(request.httpBody)
