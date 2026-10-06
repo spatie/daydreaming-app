@@ -18,3 +18,28 @@ final class SliderInteractionPolicyTests: XCTestCase {
         XCTAssertEqual(SliderInteractionPolicy.clampedHour(.infinity), 0)
     }
 }
+
+@MainActor
+final class SettingsNavigationTests: XCTestCase {
+    func testTargetedRecoveryStartsOnRequestedPane() {
+        let navigation = SettingsNavigation(pane: .imageAI)
+        XCTAssertEqual(navigation.pane, .imageAI)
+        navigation.goBack()
+        navigation.goForward()
+        XCTAssertEqual(navigation.pane, .imageAI)
+    }
+
+    func testBackThenSelectingNewPaneReplacesForwardHistory() {
+        let navigation = SettingsNavigation(pane: .general)
+        navigation.select(.imageAI)
+        navigation.select(.storage)
+        navigation.goBack()
+        XCTAssertEqual(navigation.pane, .imageAI)
+        navigation.select(.wallpapers)
+        XCTAssertFalse(navigation.canGoForward)
+        navigation.goBack()
+        XCTAssertEqual(navigation.pane, .imageAI)
+        navigation.goForward()
+        XCTAssertEqual(navigation.pane, .wallpapers)
+    }
+}

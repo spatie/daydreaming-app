@@ -4,6 +4,46 @@ import XCTest
 final class AppModelHourlyTests: XCTestCase {
 
     @MainActor
+    func testMenuFeedbackAppearsWhileUpdateIsPreparingAndAfterItApplies() async throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        fake.weatherGate = AppHourlyGate()
+        fake.creationGate = AppHourlyGate()
+        let model = fake.model()
+        defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+        let request = Task { await model.refreshIfNeeded(userInitiated: true) }
+        await appEventually { fake.weatherCalls == 1 }
+        XCTAssertEqual(model.menuUpdateStatus, "Checking local weather…")
+        fake.weatherGate?.release()
+        await request.value
+        await appEventually { fake.created.count == 1 }
+        XCTAssertEqual(model.menuUpdateStatus, "Making your wallpaper…")
+        fake.creationGate?.release()
+        await appEventually { fake.applied.count == 1 && !model.isGenerating }
+        XCTAssertTrue(model.menuUpdateStatus?.hasPrefix("Wallpaper updated at ") == true)
+    }
+
+    @MainActor
+    func testOfflineUpdateKeepsTheDesktopAndReportsFailureInTheMenu() async throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        let model = fake.model()
+        defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+        await model.refreshIfNeeded(userInitiated: true)
+        await appEventually { fake.applied.count == 1 && !model.isGenerating }
+        let desktop = model.displayedImageURL
+        fake.creationError = URLError(.notConnectedToInternet)
+        await model.refreshIfNeeded(force: true, userInitiated: true)
+        await appEventually { fake.created.count == 2 && !model.isGenerating }
+        XCTAssertEqual(model.displayedImageURL, desktop)
+        XCTAssertEqual(fake.applied.count, 1)
+        XCTAssertEqual(model.menuUpdateStatus, "Update delayed · connection unavailable")
+        XCTAssertEqual(model.recovery, .retry)
+        XCTAssertTrue(model.detail.contains("retry automatically"))
+        XCTAssertNil(model.presentation)
+    }
+
+    @MainActor
     func testOldProviderFailureCannotReplaceTheNewConnectionStatus() async throws {
         let fake = try AppHourlyFake()
         defer { fake.removeFiles() }

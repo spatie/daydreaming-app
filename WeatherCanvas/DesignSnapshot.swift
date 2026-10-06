@@ -28,7 +28,10 @@ enum DesignSnapshot {
             var capturedWindow: NSWindow?
             for _ in 0..<10 {
                 try? await Task.sleep(for: .milliseconds(500))
-                if let window = NSApp.keyWindow ?? NSApp.windows.first(where: { $0.isVisible && $0.canBecomeMain }) {
+                let window = args.contains("-preview-settings")
+                    ? NSApp.windows.first(where: { $0.identifier?.rawValue == "daydreaming.settings" && $0.isVisible })
+                    : NSApp.keyWindow ?? NSApp.windows.first(where: { $0.isVisible && $0.canBecomeMain })
+                if let window {
                     capturedWindow = window
                     break
                 }

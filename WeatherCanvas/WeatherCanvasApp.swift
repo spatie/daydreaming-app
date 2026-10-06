@@ -28,9 +28,6 @@ struct DaydreamingApp: App {
         .defaultSize(width: 1000, height: 720)
         .commands { DaydreamingCommands(model: model) }
 
-        Settings { SettingsView().environmentObject(model) }
-            .defaultSize(width: 440, height: 600)
-
         MenuBarExtra(isInserted: Binding(
             get: { model.showMenuBar },
             set: { if model.showMenuBar != $0 { model.showMenuBar = $0 } }
@@ -46,6 +43,10 @@ private struct DaydreamingCommands: Commands {
     @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
+        CommandGroup(replacing: .appSettings) {
+            Button("Settings…") { SettingsWindowController.show(model: model) }
+                .keyboardShortcut(",")
+        }
         CommandGroup(after: .appInfo) {
             Button("Check for Updates…") { updater.checkForUpdates() }
                 .disabled(!updater.canCheckForUpdates)
@@ -191,16 +192,19 @@ enum DockPresencePolicy {
 private struct MenuBarContent: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.openWindow) private var openWindow
-    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         Button("Open Daydreaming") { showMainWindow() }
         if model.onboardingComplete {
             Button("Settings…") {
                 NSApp.activate()
-                openSettings()
+                SettingsWindowController.show(model: model)
             }
             Divider()
+            if let feedback = model.menuUpdateStatus {
+                Text(feedback)
+                    .help(model.detail)
+            }
             Button("Update Now") { Task { await model.refreshIfNeeded(userInitiated: true) } }
                 .help("Creates a full-quality wallpaper for the current time. Uses \(model.imageCreditName).")
                 .disabled(model.presentation == .crop || !model.canGenerate || model.isMakingCurrentWallpaper || model.stagedPictureURL != nil)

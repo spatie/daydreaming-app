@@ -64,7 +64,7 @@ struct ImageConnectionSettingsView: View {
         } header: {
             Text("Image AI")
         } footer: {
-            Text("One AI handles previews and automatic wallpapers. Changing AI pauses updates and keeps your current desktop. \(model.imageBillingNotice)")
+            Text("Creating sends your picture and idea to \(model.imageProviderName). \(model.imageBillingNotice)")
                 .font(.caption)
         }
         .onAppear { loadConfiguration() }

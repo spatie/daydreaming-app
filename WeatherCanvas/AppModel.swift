@@ -1072,6 +1072,23 @@ final class AppModel: ObservableObject {
     var usageHelp: String { "Uses \(imageCreditName)" }
     var imageBillingNotice: String { "\(imageProviderName) bills your account for each new image." }
 
+    var menuUpdateStatus: String? {
+        if activity == .failed || activity == .waitingForLocation { return status }
+        switch activity {
+        case .checkingWeather: return "Checking local weather…"
+        case .readingSources: return "Reading your idea…"
+        case .generating: return isMakingCurrentWallpaper ? "Making your wallpaper…" : "Making a preview…"
+        case .applying: return "Applying your wallpaper…"
+        default: break
+        }
+        if isMakingCurrentWallpaper { return "Wallpaper update queued…" }
+        if let queueStatus { return queueStatus }
+        if status == "Wallpaper updated", let lastUpdated {
+            return "Wallpaper updated at \(lastUpdated.formatted(date: .omitted, time: .shortened))"
+        }
+        return nil
+    }
+
     func selectImageProvider(_ driverID: String) {
         guard driverID != settings.imageProvider.driverID, presentation != .crop, !isPreparingForAppUpdate else { return }
         var updated = settings
@@ -2675,6 +2692,15 @@ final class AppModel: ObservableObject {
         visibleFailureIsApplication = false
         activity = .failed
         switch error {
+        case let network as URLError where [.notConnectedToInternet, .networkConnectionLost, .timedOut,
+                                            .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed,
+                                            .dataNotAllowed].contains(network.code):
+            status = "Update delayed · connection unavailable"
+            recovery = .retry
+            detail = settings.automaticUpdates
+                ? "Your wallpaper stays in place. Daydreaming will retry automatically."
+                : "Your wallpaper stays in place. Try Update Now when you're back online."
+            return
         case is WeatherContextError:
             status = "Weather needs your attention"
             recovery = .weather

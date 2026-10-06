@@ -9,7 +9,6 @@ enum PictureConfirmationKeyboard {
 
 struct ContentView: View {
     @EnvironmentObject private var model: AppModel
-    @Environment(\.openSettings) private var openSettings
     @Environment(\.openWindow) private var openWindow
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -88,6 +87,11 @@ struct ContentView: View {
         }
         .navigationTitle("Daydreaming")
         .toolbar { mainToolbar }
+        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+        .background {
+            LogoBackdrop(isActive: waitingEffectsActive, inertia: logoInertia)
+                .ignoresSafeArea(.container, edges: .top)
+        }
         .fileImporter(isPresented: presentation(.picture), allowedContentTypes: [.image]) { result in
             if case .success(let url) = result {
                 if model.onboardingComplete { model.chooseWorkspacePicture(url, prompt: promptDraft) }
@@ -173,7 +177,7 @@ struct ContentView: View {
                 if !args.contains("-snapshot-to") { NSApp.activate() }
                 if let index = args.firstIndex(of: "-preview-settings"), args.indices.contains(index + 1),
                    Bundle.main.bundleIdentifier?.hasPrefix("be.spatie.daydreaming.preview") == true {
-                    openSettings()
+                    SettingsWindowController.show(model: model, pane: SettingsPane(rawValue: args[index + 1]) ?? .general)
                 }
                 DesignSnapshot.captureIfRequested()
             }
@@ -191,7 +195,6 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .background { LogoBackdrop(isActive: waitingEffectsActive, inertia: logoInertia) }
     }
 
     private var hasPicture: Bool { model.stagedPictureURL != nil || model.sourceImageURL != nil }
@@ -415,7 +418,7 @@ struct ContentView: View {
                                 Button("Make Preview") { model.schedulePreviewGeneration(hour: displayedHour, explicit: true) }
                                     .help(model.usageHelp)
                             } else if model.hasImageConnection {
-                                Button("Change Limit…") { openSettings() }.buttonStyle(.borderless)
+                                Button("Change Limit…") { SettingsWindowController.show(model: model, pane: .wallpapers) }.buttonStyle(.borderless)
                             }
                         }
                         .padding(22).frame(maxWidth: 320)
@@ -550,7 +553,7 @@ struct ContentView: View {
         } else if let recovery = model.recovery, model.activity == .failed && !model.isGenerating {
             Button(recoveryTitle(recovery)) { recover(recovery) }.buttonStyle(.borderedProminent)
         } else if hasPicture && !model.hasImageConnection {
-            Button("Add API Key…") { openSettings() }.buttonStyle(.borderedProminent)
+            Button("Add API Key…") { SettingsWindowController.show(model: model, pane: .imageAI) }.buttonStyle(.borderedProminent)
         } else if hasPicture { useWallpaperButton }
     }
 
@@ -575,7 +578,7 @@ struct ContentView: View {
             Text("Making your wallpaper…").font(.callout).foregroundStyle(.secondary)
         } else if let notice = model.previewGenerationNotice {
             Text(notice).font(.caption).foregroundStyle(.secondary).lineLimit(2)
-            Button("Change Limit…") { openSettings() }.buttonStyle(.borderless).font(.caption)
+            Button("Change Limit…") { SettingsWindowController.show(model: model, pane: .wallpapers) }.buttonStyle(.borderless).font(.caption)
         }
         if !isCropping, let title = model.queueCancellationTitle {
             Button(title) { model.cancelQueue() }.buttonStyle(.borderless).font(.caption)
@@ -793,10 +796,10 @@ struct ContentView: View {
         case .image: model.presentation = .picture
         case .retry: model.retryUpdate()
         case .weather: model.requestLocalWeatherAccess()
-        case .apiKey: openSettings()
+        case .apiKey: SettingsWindowController.show(model: model, pane: .imageAI)
         case .billing:
             if let url = model.imageProviderDescriptor?.billingURL { NSWorkspace.shared.open(url) }
-            else { openSettings() }
+            else { SettingsWindowController.show(model: model, pane: .imageAI) }
                 }
         NSApp.activate()
     }
