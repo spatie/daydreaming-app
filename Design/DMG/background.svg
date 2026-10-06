@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="480" viewBox="0 0 720 480">
+  <defs>
+    <linearGradient id="sky" x2=".8" y2="1">
+      <stop stop-color="#fff0c9"/><stop offset=".52" stop-color="#fff1eb"/><stop offset="1" stop-color="#e2e7ff"/>
+    </linearGradient>
+    <linearGradient id="dawn" x2="1" y2="1"><stop stop-color="#ffd84d"/><stop offset="1" stop-color="#ffa526"/></linearGradient>
+    <linearGradient id="coral" x2="1" y2="1"><stop stop-color="#ffac84"/><stop offset="1" stop-color="#f2475a"/></linearGradient>
+    <linearGradient id="plum" x2="1" y2="1"><stop stop-color="#d2398f"/><stop offset="1" stop-color="#9b33b5"/></linearGradient>
+    <linearGradient id="blue" x2="1" y2="1"><stop stop-color="#7185ff"/><stop offset="1" stop-color="#354ddd"/></linearGradient>
+    <radialGradient id="glow"><stop stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+  </defs>
+  <path fill="url(#sky)" d="M0 0h720v480H0z"/>
+  <ellipse cx="360" cy="220" rx="470" ry="250" fill="url(#glow)"/>
+  <g fill="#302b45" text-anchor="middle" font-family="Helvetica Neue, Helvetica, sans-serif">
+    <text x="360" y="80" font-size="36" font-weight="600" letter-spacing="-1.1">Daydreaming</text>
+    <text x="360" y="111" font-size="15" fill="#71667c">A new view, all day.</text>
+  </g>
+  <path d="M309 218 C337 209 351 237 387 224 L408 218 M395 206 L410 218 L400 232"
+        fill="none" stroke="#9585ae" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M0 346 C160 333 215 392 410 340 S600 276 720 295 V480H0z" fill="url(#dawn)" opacity=".88"/>
+  <path d="M0 387 C175 362 245 434 428 382 S620 316 720 333 V480H0z" fill="url(#coral)" opacity=".88"/>
+  <path d="M0 427 C173 401 264 469 453 422 S625 356 720 376 V480H0z" fill="url(#plum)" opacity=".9"/>
+  <path d="M0 468 C166 441 309 509 497 465 S642 397 720 415 V480H0z" fill="url(#blue)"/>
+  <path d="M0 346 C160 333 215 392 410 340 S600 276 720 295" fill="none" stroke="#fff" stroke-opacity=".75"/>
+  <path d="M0 387 C175 362 245 434 428 382 S620 316 720 333" fill="none" stroke="#fff" stroke-opacity=".5"/>
+  <path d="M0 427 C173 401 264 469 453 422 S625 356 720 376" fill="none" stroke="#fff" stroke-opacity=".4"/>
+</svg>

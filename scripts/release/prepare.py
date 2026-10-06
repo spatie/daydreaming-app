@@ -14,6 +14,7 @@ import sys
 import tempfile
 from feed import FEED_URL, DOWNLOAD_PREFIX, require_next_build, validate
 from sparkle_tools import ACCOUNT, VERSION, SHA256, fetch
+from dmg import build as build_dmg
 
 BUNDLE_ID = "be.spatie.daydreaming"
 TEAM = "97KRXCRMAY"
@@ -146,13 +147,8 @@ def prepare(args):
         validate_app(app, args.version, args.build, revision)
         zip_file = output / f"Daydreaming-{args.version}-{args.build}.zip"
         run("ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", app, zip_file)
-        dmg_source = work / "dmg"
-        dmg_source.mkdir()
-        run("ditto", app, dmg_source / "Daydreaming.app")
-        (dmg_source / "Applications").symlink_to("/Applications")
         dmg_file = output / f"Daydreaming-{args.version}-{args.build}.dmg"
-        run("hdiutil", "create", "-fs", "APFS", "-format", "ULMO", "-volname", "Daydreaming",
-            "-srcfolder", dmg_source, dmg_file)
+        build_dmg(app, dmg_file, source, work)
         run("codesign", "--force", "--sign", args.identity, "--timestamp", dmg_file)
         run("codesign", "--verify", dmg_file)
         notarize(dmg_file, args.notary_profile, output / "dmg-notarization.json")
