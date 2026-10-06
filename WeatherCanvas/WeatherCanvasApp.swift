@@ -73,9 +73,7 @@ private struct MenuBarContent: View {
         }
         .disabled(model.isGenerating)
 
-        Button(model.settings.automaticUpdates ? "Pause automatic updates" : "Start automatic updates") {
-            model.settings.automaticUpdates ? model.stopAutomatic() : model.startAutomatic()
-        }
+        Toggle("Refresh Wallpaper Automatically", isOn: model.automaticUpdatesMenuBinding)
 
         SettingsLink {
             Text("Settings…")
@@ -86,5 +84,20 @@ private struct MenuBarContent: View {
         Button("Quit Daydreaming") {
             NSApp.terminate(nil)
         }
+    }
+}
+
+private extension AppModel {
+    var automaticUpdatesMenuBinding: Binding<Bool> {
+        Binding(
+            get: { self.settings.automaticUpdates },
+            set: { isEnabled in
+                if isEnabled {
+                    self.startAutomatic()
+                } else {
+                    self.stopAutomatic()
+                }
+            }
+        )
     }
 }
