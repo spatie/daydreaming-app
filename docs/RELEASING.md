@@ -1,6 +1,6 @@
 # Preparing a Daydreaming release
 
-Sparkle is pinned to [2.10.0](https://github.com/sparkle-project/Sparkle/releases/tag/2.10.0). The feed is `https://getdaydreaming.com/appcast.xml`. Production Release builds use the feed when their committed public key is valid. Debug, preview identifiers, hosted tests and local channels never start an updater. Automatic checks remain separate from wallpaper refreshes.
+Sparkle is pinned to [2.10.0](https://github.com/sparkle-project/Sparkle/releases/tag/2.10.0). The feed is `https://getdaydreaming.com/appcast.xml`. Production Release builds use the feed when their committed public key is valid. Debug, preview identifiers, hosted tests and local channels never start an updater. Automatic checks run once a day by default, without a first-run permission question, like Bloom. Sparkle owns the saved Settings preference, so opting out remains respected. Automatic checks remain separate from wallpaper refreshes.
 
 The unique signing account is `be.spatie.daydreaming.sparkle`. Its key was created specifically for Daydreaming. Never use Sparkle's default `ed25519` account or Bloom's signing key. The public key belongs in `DAYDREAMING_SPARKLE_PUBLIC_KEY` in `project.yml`. The private key stays in Keychain. Coordinate with the owner before creating, replacing or exporting a signing key.
 
@@ -12,11 +12,11 @@ Use an existing explicitly named `notarytool` Keychain profile. The release tool
 
 ```sh
 python3 scripts/release/prepare.py \
-  --version 0.1.0 --build 3 \
+  --version 0.1.0 --build 4 \
   --identity 'Developer ID Application: Spatie (97KRXCRMAY)' \
   --notary-profile daydreaming-notary \
   --notes docs/releases/0.1.0.md \
-  --output /tmp/daydreaming-release-0.1.0-3
+  --output /tmp/daydreaming-release-0.1.0-4
 ```
 
 This command builds and submits the archives to Apple's notarization service. It does not publish, upload website files, create tags, push, commit, install or launch the app. It refuses dirty trees and existing output directories, and builds an isolated archive of the exact Git commit. XcodeGen and Xcode command line tools must already be installed. Dependency resolution uses the committed package lockfile.
