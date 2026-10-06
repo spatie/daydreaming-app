@@ -2,7 +2,9 @@
 
 Daydreaming has one active image provider, selected under Settings > Image AI. The scheduler, preview flow, crop, daily ledger and wallpaper application use the same pipeline for every provider. They do not instantiate an API client or read a provider's key.
 
-OpenAI is the default. Other image API connects a service implementing the OpenAI Images edit contract: HTTPS base URL, image model, optional faster preview model and its own API key. Enter the base URL ending in the API prefix, such as `https://images.example/v1`; the driver adds `/images/edits`. The service must accept a multipart source image, prompt, model, quality, size, PNG output and `n=1`, and return PNG image data in `data[0].b64_json`. This is a protocol adapter, not a claim that every AI service supports it. Actual third-party compatibility requires that service to implement this contract.
+OpenAI is the default and currently the only provider offered in normal Settings. The generic compatible adapter remains available for integration work, but is hidden until an actual service is verified. An already configured connection remains visible for recovery. A provider chooser appears when more than one supported driver is available.
+
+The compatible adapter implements the OpenAI Images edit contract: HTTPS base URL, image model, optional faster preview model and its own API key. The driver adds `/images/edits` to the base URL. The service must accept a multipart source image, prompt, model, quality, size, PNG output and `n=1`, and return PNG image data in `data[0].b64_json`. This is a protocol adapter, not a claim that every AI service supports it. Actual third-party compatibility requires that service to implement this contract.
 
 Keys stay in Keychain, separately scoped to the driver and server. Other providers never use the OpenAI key or its legacy migration. Switching servers requires that server's own key. Previously configured providers retain their settings and credentials but only the selected provider runs. There is no fallback to another provider, retry against another account or simultaneous connection for generation.
 

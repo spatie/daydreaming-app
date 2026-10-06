@@ -32,12 +32,13 @@ struct ImageDriverDescriptor: Identifiable, Equatable, Sendable {
     let requiresEndpoint: Bool
     let manageKeysURL: URL?
     let billingURL: URL?
+    var isUserSelectable = true
 
     static let openAI = Self(id: "openai", name: "OpenAI", requiresEndpoint: false,
                              manageKeysURL: URL(string: "https://platform.openai.com/api-keys"),
                              billingURL: URL(string: "https://platform.openai.com/settings/organization/billing/overview"))
     static let compatible = Self(id: "compatible", name: "Other image API", requiresEndpoint: true,
-                                manageKeysURL: nil, billingURL: nil)
+                                manageKeysURL: nil, billingURL: nil, isUserSelectable: false)
 
     var creditName: String { name == "OpenAI" ? "OpenAI credit" : "your image provider's credit" }
 }

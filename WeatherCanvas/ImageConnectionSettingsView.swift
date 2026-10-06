@@ -9,16 +9,20 @@ struct ImageConnectionSettingsView: View {
 
     var body: some View {
         Section {
-            Picker("Use", selection: Binding(
-                get: { model.settings.imageProvider.driverID },
-                set: { model.selectImageProvider($0); loadConfiguration() }
-            )) {
-                ForEach(model.imageDrivers) { driver in Text(driver.name).tag(driver.id) }
-                if model.imageProviderDescriptor == nil {
-                    Text("Unavailable provider").tag(model.settings.imageProvider.driverID)
+            if model.imageDrivers.count > 1 || model.imageProviderDescriptor == nil {
+                Picker("Use", selection: Binding(
+                    get: { model.settings.imageProvider.driverID },
+                    set: { model.selectImageProvider($0); loadConfiguration() }
+                )) {
+                    ForEach(model.imageDrivers) { driver in Text(driver.name).tag(driver.id) }
+                    if model.imageProviderDescriptor == nil {
+                        Text("Unavailable provider").tag(model.settings.imageProvider.driverID)
+                    }
                 }
+                .disabled(model.presentation == .crop)
+            } else {
+                LabeledContent("AI", value: model.imageProviderName)
             }
-            .disabled(model.presentation == .crop)
 
             if model.imageProviderDescriptor?.requiresEndpoint == true {
                 TextField("API base URL", text: $configuration.baseURL, prompt: Text("https://example.com/v1"))

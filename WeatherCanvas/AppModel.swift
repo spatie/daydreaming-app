@@ -1061,7 +1061,9 @@ final class AppModel: ObservableObject {
         guard let lastUpdated else { return scene }
         return "\(scene) · updated \(lastUpdated.formatted(date: .omitted, time: .shortened))"
     }
-    var imageDrivers: [ImageDriverDescriptor] { imageGeneration.registry.descriptors }
+    var imageDrivers: [ImageDriverDescriptor] {
+        imageGeneration.registry.descriptors.filter { $0.isUserSelectable || $0.id == settings.imageProvider.driverID }
+    }
     var imageProviderDescriptor: ImageDriverDescriptor? { imageGeneration.registry.descriptor(for: settings.imageProvider) }
     var imageCopy: ImageGenerationCopy { ImageGenerationCopy(provider: imageProviderDescriptor) }
     var imageProviderName: String { imageProviderDescriptor?.name ?? "Image provider" }
