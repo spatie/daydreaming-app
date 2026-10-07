@@ -24,7 +24,7 @@ final class CommunityWindowController: NSWindowController, NSWindowDelegate {
     private init(isSubmission: Bool) {
         self.isSubmission = isSubmission
         let width: CGFloat = isSubmission ? 560 : 460
-        let height = min(isSubmission ? 570.0 : 680.0, (NSScreen.main?.visibleFrame.height ?? 800) - 60)
+        let height = min(isSubmission ? 550.0 : 680.0, (NSScreen.main?.visibleFrame.height ?? 800) - 60)
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: width, height: height),
                               styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
         window.title = isSubmission ? "Ask for a feature" : "About Daydreaming"
@@ -66,14 +66,14 @@ struct PromptSubmissionView: View {
                 Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 58, height: 58)
                 VStack(alignment: .leading, spacing: 5) {
                     Text("What should Daydreaming do next?").font(.title2.weight(.semibold))
-                    Text("Tell Freek about a feature you'd love.").foregroundStyle(.secondary)
+                    Text("Tell us about a feature you'd love.").foregroundStyle(.secondary)
                 }
             }
             if let reference = draft.reference {
                 Spacer()
                 Image(systemName: "envelope.badge").font(.system(size: 36)).foregroundStyle(.purple)
                 Text("Your request is on its way.").font(.title2.weight(.semibold))
-                Text("Freek will read it and decide what to build.").foregroundStyle(.secondary)
+                Text("We'll read it and consider it for a future update.").foregroundStyle(.secondary)
                 Text("Reference: \(reference)").font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
                 Spacer()
                 HStack {
@@ -95,26 +95,29 @@ struct PromptSubmissionView: View {
                     .frame(minHeight: 130, maxHeight: .infinity)
                     .background(.background, in: .rect(cornerRadius: 8))
                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(.separator))
+                    Text("Only this form and the app version are sent. Your pictures and wallpaper idea stay private.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
                 Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 10) {
                     GridRow {
                         Text("Name or handle").font(.callout)
-                        TextField("Optional", text: $draft.name).textFieldStyle(.roundedBorder).disabled(draft.isSending)
-                            .accessibilityLabel("Name or handle for public credit, optional")
+                        VStack(alignment: .leading, spacing: 5) {
+                            TextField("Optional", text: $draft.name).textFieldStyle(.roundedBorder).disabled(draft.isSending)
+                                .accessibilityLabel("Name or handle for public credit, optional")
+                            Text("Your name may appear in release notes.").font(.caption).foregroundStyle(.secondary)
+                        }
                     }
                     GridRow {
                         Text("Email").font(.callout)
-                        TextField("Optional", text: $draft.email).textFieldStyle(.roundedBorder).disabled(draft.isSending)
-                            .accessibilityLabel("Email for a private reply, optional")
+                        VStack(alignment: .leading, spacing: 5) {
+                            TextField("Optional", text: $draft.email).textFieldStyle(.roundedBorder).disabled(draft.isSending)
+                                .accessibilityLabel("Email for a private reply, optional")
+                            Text("Your email is only for a reply.").font(.caption).foregroundStyle(.secondary)
+                        }
                     }
                 }
-                Text("Your name may appear in release notes. Your email is only for a reply.")
-                    .font(.caption).foregroundStyle(.secondary)
-                Text("Only this form and the app version are sent. Your pictures and wallpaper idea stay out of it.")
-                    .font(.caption).foregroundStyle(.secondary)
                 if let error = draft.error { Text(error).font(.callout).foregroundStyle(.red).accessibilityAddTraits(.updatesFrequently) }
                 HStack {
-                    Link("Privacy", destination: URL(string: "https://getdaydreaming.com/privacy")!)
                     Spacer()
                     Button("Cancel", action: close).keyboardShortcut(.cancelAction)
                     Button { draft.submit() } label: {
@@ -128,7 +131,7 @@ struct PromptSubmissionView: View {
                 }
             }
         }
-        .padding(26).padding(.top, 18)
+        .padding(.horizontal, 26).padding(.bottom, 22).padding(.top, 8)
         .background {
             LogoBackdrop(isActive: false, inertia: .init())
                 .ignoresSafeArea(.container, edges: .top)
