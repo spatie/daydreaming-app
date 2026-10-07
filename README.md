@@ -2,7 +2,7 @@
 
 # Daydreaming
 
-Your favorite picture, changing with the day.
+See your old wallpaper in a new light.
 
 Daydreaming is a native macOS app that reimagines your picture for the current time and local weather, then updates your wallpaper on your chosen schedule. Built with Swift 6, SwiftUI and AppKit. Free, open source and postcardware.
 
