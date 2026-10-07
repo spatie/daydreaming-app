@@ -38,9 +38,14 @@ struct ImageConnectionSettingsView: View {
 
             if model.hasImageConnection {
                 HStack {
-                    Label(connectionLabel, systemImage: model.imageConnectionVerifiedAt != nil ? "checkmark.circle.fill" : "key")
-                        .foregroundStyle(model.imageConnectionVerifiedAt != nil ? Color.green : Color.primary)
-                        .help(connectionHelp)
+                    Label {
+                        Text(connectionLabel)
+                    } icon: {
+                        Image(systemName: model.imageConnectionVerifiedAt != nil ? "checkmark.circle" : "key")
+                            .foregroundStyle(model.imageConnectionVerifiedAt != nil ? Color.green.opacity(0.65) : Color.secondary)
+                    }
+                    .foregroundStyle(.secondary)
+                    .help(connectionHelp)
                     Spacer()
                     if !model.isCheckingImageConnection {
                         Button(model.imageConnectionVerifiedAt == nil ? "Check Connection" : "Check Again") {

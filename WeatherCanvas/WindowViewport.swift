@@ -13,6 +13,7 @@ struct WindowViewport: NSViewRepresentable {
     }
     static func dismantleNSView(_ view: ViewportView, coordinator: ()) { view.removeObservers() }
     final class ViewportView: NSView {
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
         var onWindowAvailable: ((NSWindow) -> Void)?
         var onWindowMoved: ((CGPoint) -> Void)?
         private weak var configuredWindow: NSWindow?

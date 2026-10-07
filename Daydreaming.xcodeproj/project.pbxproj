@@ -8,8 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		052D82676410EAC1C2C203D7 /* DreamingArtwork.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9B9B0F153A83F84FA17BC0F3 /* DreamingArtwork.metal */; };
+		0848C68CF568289E16217D55 /* PictureDescriptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF5F8AD7DC4AA61C07D24F37 /* PictureDescriptionTests.swift */; };
 		0934AEDAE4A4A75A888BA7DF /* LivingBackdropTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 151675FE61EB88E5C021393C /* LivingBackdropTests.swift */; };
 		0C354417CD5F261BF4B177A1 /* PreviewWaitingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE38597092AEA5172D199F84 /* PreviewWaitingView.swift */; };
+		0C5C2961F5C6FD517D223A1C /* PictureDescription.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE49327FDE137E4D05823E4B /* PictureDescription.swift */; };
 		0CD73CD868D6900E55BCA54D /* PromptSubmissionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CD8074A4DDD8E081C5028C3 /* PromptSubmissionTests.swift */; };
 		0E8A0CC82E9710B9C1DDC4F6 /* AppModelHourlyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBDE7979919E5E31A79CEFCD /* AppModelHourlyTests.swift */; };
 		0E9ECAC870AD52AFE97141E1 /* DesignAlternatives.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB0ABFD1C861AEB39C5CD157 /* DesignAlternatives.swift */; };
@@ -189,6 +191,8 @@
 		DB0ABFD1C861AEB39C5CD157 /* DesignAlternatives.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignAlternatives.swift; sourceTree = "<group>"; };
 		DCE9DDEF2D5A8995A2DE084F /* SavedWallpaperGridNavigationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedWallpaperGridNavigationTests.swift; sourceTree = "<group>"; };
 		DE38597092AEA5172D199F84 /* PreviewWaitingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewWaitingView.swift; sourceTree = "<group>"; };
+		DE49327FDE137E4D05823E4B /* PictureDescription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PictureDescription.swift; sourceTree = "<group>"; };
+		DF5F8AD7DC4AA61C07D24F37 /* PictureDescriptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PictureDescriptionTests.swift; sourceTree = "<group>"; };
 		E29C15CAFA5BC3591BF6304B /* ImageGenerationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageGenerationService.swift; sourceTree = "<group>"; };
 		E6D68FC1216197ED10933B4B /* HourlyGenerationQueueTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HourlyGenerationQueueTests.swift; sourceTree = "<group>"; };
 		E6EB174CE4EA91168CA6A33B /* PromptContextReaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptContextReaderTests.swift; sourceTree = "<group>"; };
@@ -275,6 +279,7 @@
 				3AFEDC35D3C8B6A79DD812B4 /* OnboardingView.swift */,
 				FFA0A370BC1745A59CA9F4DD /* OpenAIImageClient.swift */,
 				81611A0CE8C3EAB8B0D66CE3 /* PictureCrop.swift */,
+				DE49327FDE137E4D05823E4B /* PictureDescription.swift */,
 				D2443740B24068E4A1601382 /* PictureHistory.swift */,
 				19EB30CFC31FE1353130FB16 /* PreviewSavedVariationScrolling.swift */,
 				DE38597092AEA5172D199F84 /* PreviewWaitingView.swift */,
@@ -331,6 +336,7 @@
 				A3AAF90B21FB1AF3871098D3 /* ModelsMigrationTests.swift */,
 				33920C4CB951A721C04D4261 /* OpenAIImageClientTests.swift */,
 				072EF5B5BFDB8B72F69A3262 /* PictureCropTests.swift */,
+				DF5F8AD7DC4AA61C07D24F37 /* PictureDescriptionTests.swift */,
 				38AA54DF513C5104A82FBB74 /* PictureHistoryTests.swift */,
 				E6EB174CE4EA91168CA6A33B /* PromptContextReaderTests.swift */,
 				EDAE6CC55F00EBD5CBC86879 /* PromptEditorTests.swift */,
@@ -494,6 +500,7 @@
 				BC6CFCD88A992A290E50AFC3 /* ModelsMigrationTests.swift in Sources */,
 				61EE24B5DE6785D6B5A431D2 /* OpenAIImageClientTests.swift in Sources */,
 				B3AA70A8492626A42AB09428 /* PictureCropTests.swift in Sources */,
+				0848C68CF568289E16217D55 /* PictureDescriptionTests.swift in Sources */,
 				3952366F47951A41752C7C3B /* PictureHistoryTests.swift in Sources */,
 				776C3C4037A7FB7A072564FA /* PromptContextReaderTests.swift in Sources */,
 				8699D6445FE2C1DF891E4562 /* PromptEditorTests.swift in Sources */,
@@ -542,6 +549,7 @@
 				963D2611FB5D4362C01D1D3B /* OnboardingView.swift in Sources */,
 				27939DAA1DD75EC2B8477282 /* OpenAIImageClient.swift in Sources */,
 				82B6E0EB3BA30D54A82DE72A /* PictureCrop.swift in Sources */,
+				0C5C2961F5C6FD517D223A1C /* PictureDescription.swift in Sources */,
 				F9F2AF93D7606365EF622E49 /* PictureHistory.swift in Sources */,
 				FEF95C571F91A5EA071EB141 /* PreviewSavedVariationScrolling.swift in Sources */,
 				0C354417CD5F261BF4B177A1 /* PreviewWaitingView.swift in Sources */,
@@ -670,7 +678,7 @@
 				CODE_SIGN_IDENTITY = "Developer ID Application";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 19;
+				CURRENT_PROJECT_VERSION = 20;
 				DAYDREAMING_BUILD_CHANNEL = release;
 				DAYDREAMING_DATA_PROTECTION_KEYCHAIN = NO;
 				DAYDREAMING_SPARKLE_PUBLIC_KEY = "ClbZzJEHvApUetl1Ej1lXqmInXzGjJEwvd2YDrFK2+4=";
@@ -687,7 +695,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 0.0.5;
+				MARKETING_VERSION = 0.0.6;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -752,7 +760,7 @@
 				CODE_SIGN_IDENTITY = "Developer ID Application";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 19;
+				CURRENT_PROJECT_VERSION = 20;
 				DAYDREAMING_BUILD_CHANNEL = local;
 				DAYDREAMING_DATA_PROTECTION_KEYCHAIN = NO;
 				DAYDREAMING_SPARKLE_PUBLIC_KEY = "ClbZzJEHvApUetl1Ej1lXqmInXzGjJEwvd2YDrFK2+4=";
@@ -775,7 +783,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 0.0.5;
+				MARKETING_VERSION = 0.0.6;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;

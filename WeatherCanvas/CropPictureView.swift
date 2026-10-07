@@ -337,6 +337,7 @@ private struct CropWheelZoom: NSViewRepresentable {
     static func dismantleNSView(_ view: WheelView, coordinator: ()) { view.removeMonitor() }
 
     final class WheelView: NSView {
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
         var enabled = false
         var onZoom: (@MainActor (CGFloat) -> Void)?
         private var monitor: Any?

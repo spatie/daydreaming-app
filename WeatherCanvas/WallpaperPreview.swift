@@ -55,6 +55,7 @@ struct WallpaperPreview: View {
                 canvas.clipShape(.rect(cornerRadius: fullBleed ? 0 : 16))
             }
         }
+        .contentShape(.rect)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(label)
         .task(id: url) {
@@ -121,6 +122,7 @@ struct ScreenFramedArtwork: View {
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
         }
+        .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
 }

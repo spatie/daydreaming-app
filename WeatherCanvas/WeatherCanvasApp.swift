@@ -201,6 +201,7 @@ enum DockPresencePolicy {
 
 private struct MenuBarContent: View {
     @EnvironmentObject private var model: AppModel
+    @ObservedObject private var updater = UpdaterManager.shared
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -223,6 +224,10 @@ private struct MenuBarContent: View {
         }
         Divider()
         Button(AppCopy.askForAFeature) { CommunityWindowController.showSubmission() }
+        if updater.isUpdateAvailable {
+            Button("App update available…") { updater.checkForUpdates() }
+                .disabled(!updater.canCheckForUpdates)
+        }
         Divider()
         Button("Quit Daydreaming") { NSApp.terminate(nil) }
         Divider()

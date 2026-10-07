@@ -1,4 +1,5 @@
 import XCTest
+import Sparkle
 @testable import Daydreaming
 
 final class UpdaterPolicyTests: XCTestCase {
@@ -28,6 +29,31 @@ final class UpdaterPolicyTests: XCTestCase {
         XCTAssertFalse(manager.canCheckForUpdates)
         XCTAssertFalse(manager.automaticallyChecks)
         XCTAssertFalse(manager.isPresentingUpdateUI)
+    }
+
+    @MainActor
+    func testUpdateMenuRemainsAvailableAfterDismissingTheWindow() {
+        let manager = UpdaterManager()
+        let controller = SPUStandardUpdaterController(startingUpdater: false, updaterDelegate: nil, userDriverDelegate: nil)
+        let item = SUAppcastItem.empty()
+        XCTAssertFalse(manager.isUpdateAvailable)
+        manager.updater(controller.updater, didFindValidUpdate: item)
+        XCTAssertTrue(manager.isUpdateAvailable)
+        manager.standardUserDriverWillFinishUpdateSession()
+        XCTAssertTrue(manager.isUpdateAvailable)
+        manager.updater(controller.updater, willInstallUpdate: item)
+        XCTAssertFalse(manager.isUpdateAvailable)
+    }
+
+    @MainActor
+    func testNoValidUpdateClearsTheMenuAndDoesNotStartAnUpdate() {
+        let manager = UpdaterManager()
+        let controller = SPUStandardUpdaterController(startingUpdater: false, updaterDelegate: nil, userDriverDelegate: nil)
+        manager.updater(controller.updater, didFindValidUpdate: SUAppcastItem.empty())
+        manager.updaterDidNotFindUpdate(controller.updater, error: NSError(domain: "test", code: 0))
+        XCTAssertFalse(manager.isUpdateAvailable)
+        XCTAssertFalse(manager.isEnabled)
+        XCTAssertFalse(manager.canCheckForUpdates)
     }
 
     private func allowed(bundle: String? = AppRuntime.productionBundleID, channel: String = "release",

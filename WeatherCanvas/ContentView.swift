@@ -238,7 +238,9 @@ struct ContentView: View {
                     .help("Choose a picture, or drop one anywhere in this window.")
                     if hasPicture {
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text(model.stagedPictureURL != nil ? model.stagedPictureName : model.sourceImageName)
+                            PictureDescriptionText(sourceURL: model.stagedPictureURL ?? model.uncroppedImageURL,
+                                                   digest: model.stagedPictureURL == nil ? model.settings.originalPictureDigest : nil,
+                                                   fallback: model.stagedPictureURL != nil ? model.stagedPictureName : model.sourceImageName)
                                 .font(.callout).lineLimit(1).truncationMode(.middle)
                             Spacer(minLength: 0)
                             Button("Change…") { choosePicture() }.buttonStyle(.borderless).font(.caption)
@@ -436,8 +438,14 @@ struct ContentView: View {
             .accessibilityLabel("About your idea")
             .help(model.imageCopy.ideaHelp)
             .popover(isPresented: $showingPromptHelp) {
-                Text(model.imageCopy.ideaHelp)
-                    .padding(16).frame(width: 300)
+                VStack(alignment: .leading, spacing: 14) {
+                    Text(ImageGenerationCopy.ideaIntroduction)
+                    Text("Examples").fontWeight(.semibold)
+                    ForEach(ImageGenerationCopy.ideaExamples, id: \.self) { example in
+                        Text(example).textSelection(.enabled)
+                    }
+                }
+                .font(.callout).padding(16).frame(width: 300)
             }
         }
     }

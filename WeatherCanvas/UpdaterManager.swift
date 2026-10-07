@@ -20,6 +20,7 @@ final class UpdaterManager: NSObject, ObservableObject, SPUUpdaterDelegate, @pre
     @Published private(set) var canCheckForUpdates = false
     @Published private(set) var isEnabled = false
     @Published private(set) var automaticallyChecks = false
+    @Published private(set) var isUpdateAvailable = false
     private(set) var isPresentingUpdateUI = false
     var onPresentationChanged: (() -> Void)?
     var beforeInstallation: (() -> Void)?
@@ -33,6 +34,9 @@ final class UpdaterManager: NSObject, ObservableObject, SPUUpdaterDelegate, @pre
         super.init()
         #if DEBUG
         let isDebug = true
+        if AppRuntime.isPreview && ProcessInfo.processInfo.arguments.contains("-preview-app-update") {
+            isUpdateAvailable = true
+        }
         #else
         let isDebug = false
         #endif
@@ -92,6 +96,18 @@ final class UpdaterManager: NSObject, ObservableObject, SPUUpdaterDelegate, @pre
             throw NSError(domain: "be.spatie.daydreaming.updates", code: 1,
                           userInfo: [NSLocalizedDescriptionKey: "Finish the current wallpaper before updating Daydreaming."])
         }
+    }
+
+    func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
+        isUpdateAvailable = true
+    }
+
+    func updaterDidNotFindUpdate(_ updater: SPUUpdater, error: Error) {
+        isUpdateAvailable = false
+    }
+
+    func updater(_ updater: SPUUpdater, willInstallUpdate item: SUAppcastItem) {
+        isUpdateAvailable = false
     }
 
     func updater(_ updater: SPUUpdater, shouldPostponeRelaunchForUpdate item: SUAppcastItem,

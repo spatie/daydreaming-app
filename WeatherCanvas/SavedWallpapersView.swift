@@ -119,7 +119,8 @@ struct SavedWallpapersView: View {
                                         .clipShape(.rect(cornerRadius: 8))
                                 }
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(group.name).font(.headline).lineLimit(1)
+                                    PictureDescriptionText(sourceURL: group.original?.originalURL, digest: group.id, fallback: group.name)
+                                        .font(.headline).lineLimit(1)
                                     Text(idea(for: group)).font(.callout).foregroundStyle(.secondary).lineLimit(2)
                                     if model.historyPictureIsInUse(group.id) {
                                         Text("In use").font(.caption).foregroundStyle(.secondary)
@@ -134,7 +135,7 @@ struct SavedWallpapersView: View {
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("\(group.name), \(idea(for: group))")
+                        .accessibilityElement(children: .combine)
                         .accessibilityAddTraits(selectedGroupID == group.id ? .isSelected : [])
                         .contextMenu {
                             if let original = group.original {
@@ -174,7 +175,7 @@ struct SavedWallpapersView: View {
         VStack(alignment: .leading, spacing: 12) {
             if let group = selectedGroup, let original = group.original {
                 HStack {
-                    Text(group.name).font(.headline)
+                    PictureDescriptionText(sourceURL: original.originalURL, digest: group.id, fallback: group.name).font(.headline)
                     Spacer()
                     Text("Original picture").font(.callout).foregroundStyle(.secondary)
                 }
