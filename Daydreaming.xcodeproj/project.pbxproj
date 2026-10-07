@@ -91,6 +91,7 @@
 		E1C2830BF0DFA79B18CA0BB3 /* WallpaperWindowGeometryBoundaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 117E2150EA54CB1B96F9CAB1 /* WallpaperWindowGeometryBoundaryTests.swift */; };
 		E776753128AA09E2FA195983 /* LivingBackdrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D136A784FF6027FF880ABD1 /* LivingBackdrop.swift */; };
 		EA109CAF496320E65A5C0C4F /* DreamingArtwork.swift in Sources */ = {isa = PBXBuildFile; fileRef = D445AAA98D5D733BCBBF3BBA /* DreamingArtwork.swift */; };
+		EE7D0E505F8A8AB5F2A57313 /* WeatherLocationControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77D3F05637285D905C9C6C86 /* WeatherLocationControls.swift */; };
 		F1552996C6EFDBDF38C01818 /* UpdaterPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 775A9D8FECBD3C878BB34658 /* UpdaterPolicyTests.swift */; };
 		F23514BC0D6EBBE152061013 /* PromptFileAuthorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = A360860F7AED42BA8B4F321B /* PromptFileAuthorization.swift */; };
 		F9F2AF93D7606365EF622E49 /* PictureHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2443740B24068E4A1601382 /* PictureHistory.swift */; };
@@ -145,6 +146,7 @@
 		6BB94D2CB6FFB1D62A508057 /* THIRD_PARTY_NOTICES.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = THIRD_PARTY_NOTICES.txt; sourceTree = "<group>"; };
 		6D0FB808CDB8E0E2A00F2E40 /* HourlyGenerationProcessorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HourlyGenerationProcessorTests.swift; sourceTree = "<group>"; };
 		775A9D8FECBD3C878BB34658 /* UpdaterPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdaterPolicyTests.swift; sourceTree = "<group>"; };
+		77D3F05637285D905C9C6C86 /* WeatherLocationControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherLocationControls.swift; sourceTree = "<group>"; };
 		7B51BAC3A7B013B11C2E2035 /* InstallationReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstallationReporter.swift; sourceTree = "<group>"; };
 		7D136A784FF6027FF880ABD1 /* LivingBackdrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LivingBackdrop.swift; sourceTree = "<group>"; };
 		7D48361C3BC2E2413E8EF75E /* MakerMailcoach.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = MakerMailcoach.png; sourceTree = "<group>"; };
@@ -294,6 +296,7 @@
 				4914305878E8B25AFC801FE1 /* WeatherCanvas.entitlements */,
 				14C7F9FD42719F78CB0F0CE8 /* WeatherCanvasApp.swift */,
 				18015283B6A2E1FFFE7385D9 /* WeatherContext.swift */,
+				77D3F05637285D905C9C6C86 /* WeatherLocationControls.swift */,
 				93ED2FBE2D7D21EB478C0210 /* WindowViewport.swift */,
 				6696EB3DED7058D69D8F172F /* Resources */,
 			);
@@ -558,6 +561,7 @@
 				9644C86C18169DA44E4AA51D /* WallpaperWindowGeometry.swift in Sources */,
 				6F3F671546496185832D5351 /* WeatherCanvasApp.swift in Sources */,
 				89A08BC8C772D0F73BEB1826 /* WeatherContext.swift in Sources */,
+				EE7D0E505F8A8AB5F2A57313 /* WeatherLocationControls.swift in Sources */,
 				5A349EB52D3FD40268690BEE /* WindowViewport.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -666,7 +670,7 @@
 				CODE_SIGN_IDENTITY = "Developer ID Application";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DAYDREAMING_BUILD_CHANNEL = release;
 				DAYDREAMING_DATA_PROTECTION_KEYCHAIN = NO;
 				DAYDREAMING_SPARKLE_PUBLIC_KEY = "ClbZzJEHvApUetl1Ej1lXqmInXzGjJEwvd2YDrFK2+4=";
@@ -683,7 +687,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 0.0.2;
+				MARKETING_VERSION = 0.0.3;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -748,7 +752,7 @@
 				CODE_SIGN_IDENTITY = "Developer ID Application";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DAYDREAMING_BUILD_CHANNEL = local;
 				DAYDREAMING_DATA_PROTECTION_KEYCHAIN = NO;
 				DAYDREAMING_SPARKLE_PUBLIC_KEY = "ClbZzJEHvApUetl1Ej1lXqmInXzGjJEwvd2YDrFK2+4=";
@@ -771,7 +775,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 0.0.2;
+				MARKETING_VERSION = 0.0.3;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;

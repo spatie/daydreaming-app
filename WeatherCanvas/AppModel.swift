@@ -2943,6 +2943,9 @@ final class AppModel: ObservableObject {
                      "Design previews require an isolated bundle identifier")
         isDesignPreview = true
         settings.weatherChoice = .clear
+        if arguments.contains("-preview-fixed-location") {
+            settings.weatherLocation = .fixed(WeatherPlace(name: "Antwerp, Belgium", latitude: 51.22, longitude: 4.40))
+        }
         showMenuBar = true
         if let imageIndex = arguments.firstIndex(of: "-preview-image"), arguments.indices.contains(imageIndex + 1) {
             settings.sourcePath = arguments[imageIndex + 1]

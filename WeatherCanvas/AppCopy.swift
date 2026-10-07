@@ -13,7 +13,7 @@ enum AppCopy {
 struct ImageGenerationCopy {
     let provider: ImageDriverDescriptor?
     private var credit: String { provider?.creditName ?? "your image provider's credit" }
-    var ideaHelp: String { "Describe how your picture should change. We add the preview time, weather at your chosen location, and whether macOS is in Light or Dark Mode.\n\nFor example: \"Keep the scene natural in Light Mode, and use softer, darker colors in Dark Mode.\"" }
+    var ideaHelp: String { "Describe how your picture should change. We add the preview time, weather at your chosen location, and whether macOS is in Light or Dark Mode.\n\nFor example: \"Follow the time of day and weather at my chosen location: warm morning light, rain when it rains, and city lights after sunset. Use softer, darker colors in Dark Mode.\"" }
     var previewTimeHelp: String { "After you stop moving the slider, Daydreaming makes a preview for that hour using \(credit). Your desktop keeps following the current time." }
     var historyChoiceNotice: String { "Reuses a saved preview or makes one using \(credit). Your desktop stays unchanged." }
     func cropDoneNotice(hasChanges: Bool) -> String {
