@@ -156,6 +156,18 @@ struct HourWallpaperCache: Sendable {
         try JSONEncoder().encode(entries).write(to: indexURL, options: .atomic)
     }
 
+    mutating func delete(_ removed: [Entry]) throws {
+        guard !hasUnreadableIndex else { throw HourWallpaperCacheError.unreadableIndex }
+        guard removed.allSatisfy(entries.contains) else { throw HourWallpaperCacheError.invalidPicture }
+        let files = removed.compactMap { validURL(for: $0) }
+        let filenames = Set(removed.map(\.filename))
+        let updated = entries.filter { !filenames.contains($0.filename) }
+        guard updated != entries else { return }
+        try JSONEncoder().encode(updated).write(to: indexURL, options: .atomic)
+        entries = updated
+        for url in files { try FileManager.default.removeItem(at: url) }
+    }
+
     private func validURL(for entry: Entry) -> URL? {
         guard !entry.filename.isEmpty, entry.filename == URL(fileURLWithPath: entry.filename).lastPathComponent,
               !entry.filename.contains("/"), entry.filename != ".", entry.filename != ".." else { return nil }

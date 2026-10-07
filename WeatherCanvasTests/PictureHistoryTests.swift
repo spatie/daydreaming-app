@@ -43,7 +43,20 @@ final class PictureHistoryTests: XCTestCase {
         let image = try original("picture.png", in: directory)
         var history = PictureHistory(directory: directory)
         XCTAssertThrowsError(try history.record(digest: "picture", name: "Picture", originalURL: image))
+        XCTAssertThrowsError(try history.remove(digest: "picture"))
         XCTAssertEqual(try Data(contentsOf: index), damaged)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: image.path))
+    }
+
+    func testRemovingAnOriginalPersistsWithoutDeletingTheUserFile() throws {
+        let directory = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let image = try original("picture.png", in: directory)
+        var history = PictureHistory(directory: directory)
+        try history.record(digest: "picture", name: "Picture", originalURL: image)
+        try history.remove(digest: "picture")
+        XCTAssertTrue(history.entries.isEmpty)
+        XCTAssertTrue(PictureHistory(directory: directory).entries.isEmpty)
         XCTAssertTrue(FileManager.default.fileExists(atPath: image.path))
     }
 

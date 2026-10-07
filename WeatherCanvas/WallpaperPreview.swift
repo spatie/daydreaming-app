@@ -21,7 +21,9 @@ struct WallpaperPreview: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                Color(nsColor: .windowBackgroundColor)
+                if displayAspectRatio == nil || image == nil || backdropOnly {
+                    Color(nsColor: .windowBackgroundColor)
+                }
                 if let image {
                     if backdropOnly {
                         SoftArtworkBackdrop(image: image)

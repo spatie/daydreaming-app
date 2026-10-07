@@ -495,6 +495,56 @@ final class AppModel: ObservableObject {
 
     var pictureHistoryEntries: [PictureHistory.Entry] { pictureHistory?.entries ?? [] }
 
+    private var historyProtectedSettings: [CanvasSettings] {
+        [settings, previewSettings]
+            + [previousWallpaperRecipe, draftPreviewSettings, generationQueue.current?.settings].compactMap { $0 }
+            + generationQueue.pending.map(\.settings)
+            + preparationRequests.values.map(\.settingsSnapshot)
+    }
+
+    func historyPictureIsInUse(_ digest: String) -> Bool {
+        guard let original = pictureHistory?.entry(for: digest) else { return false }
+        if historyProtectedSettings.contains(where: {
+            ($0.originalPictureDigest ?? $0.sourceDigest) == digest
+                || [$0.sourcePath, $0.uncroppedSourcePath].compactMap { $0 }.contains(original.originalURL.path)
+        }) { return true }
+        let protected = [displayedImageURL, applicationRetry?.url].compactMap { $0 }
+        let group = PictureHistoryGalleryGroup.make(originals: pictureHistoryEntries,
+            variations: savedWallpaperGroups.flatMap(\.wallpapers)).first { $0.id == digest }
+        return protected.contains(original.originalURL)
+            || group?.variations.contains(where: { protected.contains($0.url) }) == true
+    }
+
+    func deleteHistoryPicture(digest: String) throws {
+        guard allowsHourlyPipeline, !isPreparingForAppUpdate, !historyPictureIsInUse(digest) else {
+            throw PictureHistoryError.pictureInUse
+        }
+        guard let original = pictureHistory?.entry(for: digest) else { throw PictureHistoryError.invalidOriginal }
+        guard pictureHistory?.hasUnreadableIndex == false else { throw PictureHistoryError.unreadableHistory }
+        let variations = PictureHistoryGalleryGroup.make(originals: pictureHistoryEntries,
+            variations: savedWallpaperGroups.flatMap(\.wallpapers)).first { $0.id == digest }?.variations ?? []
+        try hourCache?.delete(variations.map(\.entry))
+        try pictureHistory?.remove(digest: digest)
+        let paths = Set([original.originalURL.path] + variations.flatMap {
+            [$0.entry.settingsSnapshot?.sourcePath, $0.entry.settingsSnapshot?.uncroppedSourcePath].compactMap { $0 }
+        })
+        let retainedSettings = historyProtectedSettings + (hourCache?.entries.compactMap(\.settingsSnapshot) ?? [])
+        let protectedPaths = Set(pictureHistoryEntries.map { $0.originalURL.path }
+            + retainedSettings.flatMap { [$0.sourcePath, $0.uncroppedSourcePath].compactMap { $0 } }
+            + [displayedImageURL?.path, applicationRetry?.url.path].compactMap { $0 })
+        for path in paths.subtracting(protectedPaths) {
+            let owned = hourlyServices.map { path.hasPrefix($0.cacheDirectory.path + "/") } ?? ImageStore.owns(path)
+            if owned, FileManager.default.fileExists(atPath: path) {
+                try FileManager.default.removeItem(atPath: path)
+            }
+        }
+        savedWallpaperRevision += 1
+        if let selectedSavedWallpaper, variations.contains(where: { $0.id == selectedSavedWallpaper.id }) {
+            self.selectedSavedWallpaper = nil; selectedSavedWallpaperPrompt = nil; browsingSavedVariations = false
+            refreshSelectedPreview()
+        }
+    }
+
     func stageHistoryPicture(digest: String, variation: SavedWallpaperItem? = nil) {
         guard let entry = pictureHistory?.entry(for: digest) else { return }
         stagePicture(entry.originalURL)
@@ -890,6 +940,11 @@ final class AppModel: ObservableObject {
         if let currentLocalWeather { return currentLocalWeather }
         if isDesignPreview && hourlyServices == nil { return latestWeather }
         return nil
+    }
+
+    var menuWeatherStatus: String {
+        let title = settings.weatherChoice == .automatic ? "Weather now" : "Fixed weather"
+        return "\(title) · \(workspaceWeather?.label.capitalized ?? "Unavailable")"
     }
 
     func refreshWorkspaceWeather() async {

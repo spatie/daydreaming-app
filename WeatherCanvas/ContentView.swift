@@ -318,9 +318,6 @@ struct ContentView: View {
                             Text("Preview the day").font(.callout.weight(.medium))
                             Spacer()
                         }
-                        Text(model.imageCopy.previewTimeNotice)
-                            .font(.caption).foregroundStyle(.primary)
-                            .fixedSize(horizontal: false, vertical: true)
                         timeSlider(now: timeline.date)
                     }
                     .onChange(of: timeline.date) { _, date in

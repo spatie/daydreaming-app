@@ -12,6 +12,8 @@ struct SavedWallpapersView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selectedGroupID: String?
     @State private var quickLookURL: URL?
+    @State private var pictureToDelete: PictureHistoryGalleryGroup?
+    @State private var deletionError: String?
     @FocusState private var galleryFocused: Bool
 
     private var groups: [PictureHistoryGalleryGroup] {
@@ -27,7 +29,10 @@ struct SavedWallpapersView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("Previous pictures").font(.headline)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Previous pictures").font(.headline)
+                    Text("Bring back a picture and its idea.").font(.callout).foregroundStyle(.secondary)
+                }
                 Spacer()
             }
             .padding(.horizontal, 20).padding(.vertical, 14)
@@ -39,7 +44,7 @@ struct SavedWallpapersView: View {
                 GeometryReader { geometry in
                     if geometry.size.width >= 700 {
                         HStack(spacing: 0) {
-                            gallery.frame(width: geometry.size.width * 0.4)
+                            gallery.frame(width: min(300, geometry.size.width * 0.36))
                             Divider()
                             selectionDetail.frame(maxWidth: .infinity, maxHeight: .infinity)
                         }
@@ -51,16 +56,20 @@ struct SavedWallpapersView: View {
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(alignment: .leading, spacing: 8) {
-                if !groups.isEmpty {
-                    Text(model.imageCopy.historyChoiceNotice)
-                        .font(.caption).foregroundStyle(.secondary)
+                if let deletionError {
+                    Text(deletionError).font(.callout).foregroundStyle(.red)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 HStack {
                     Button("Close") { dismiss() }.keyboardShortcut(.cancelAction)
+                    if let group = selectedGroup {
+                        Button("Delete Picture…", systemImage: "trash", role: .destructive) { pictureToDelete = group }
+                            .disabled(model.historyPictureIsInUse(group.id))
+                            .help("Deletes this picture and its saved previews from Daydreaming. Pictures in use are kept.")
+                    }
                     Spacer()
                     if !groups.isEmpty {
-                        Button("Choose Picture & Idea") { chooseOriginal() }
+                        Button("Preview This Picture") { chooseOriginal() }
                             .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
                             .disabled(!canChoose)
                             .help("Restores this picture and its idea. \(model.imageCopy.historyChoiceNotice) \(AppCopy.usePictureAndIdeaAsWallpaper) starts desktop updates.")
@@ -72,6 +81,18 @@ struct SavedWallpapersView: View {
         }
         .frame(width: max(360, width), height: height)
         .quickLookPreview($quickLookURL)
+        .confirmationDialog("Delete this picture?", isPresented: Binding(
+            get: { pictureToDelete != nil }, set: { if !$0 { pictureToDelete = nil } }
+        ), presenting: pictureToDelete) { group in
+            Button("Delete Picture", role: .destructive) {
+                do { try model.deleteHistoryPicture(digest: group.id); deletionError = nil }
+                catch { deletionError = error.localizedDescription }
+                pictureToDelete = nil
+            }
+            Button("Cancel", role: .cancel) { pictureToDelete = nil }
+        } message: { group in
+            Text("Removes \(group.name) and its saved previews from Daydreaming. Your original file and desktop wallpaper stay unchanged.")
+        }
         .onAppear {
             selectedGroupID = groups.first?.id
             galleryFocused = !groups.isEmpty
@@ -91,14 +112,19 @@ struct SavedWallpapersView: View {
                             selectedGroupID = group.id
                             galleryFocused = true
                         } label: {
-                            VStack(alignment: .leading, spacing: 8) {
+                            HStack(alignment: .center, spacing: 12) {
                                 if let original = group.original {
                                     SavedWallpaperThumbnail(url: original.originalURL, revision: original.importedAt)
-                                        .aspectRatio(3.0 / 2, contentMode: .fit)
+                                        .frame(width: 72, height: 72)
                                         .clipShape(.rect(cornerRadius: 8))
                                 }
-                                Text(group.name).font(.headline).lineLimit(1)
-                                Text(idea(for: group)).font(.callout).foregroundStyle(.secondary).lineLimit(3)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(group.name).font(.headline).lineLimit(1)
+                                    Text(idea(for: group)).font(.callout).foregroundStyle(.secondary).lineLimit(2)
+                                    if model.historyPictureIsInUse(group.id) {
+                                        Text("In use").font(.caption).foregroundStyle(.secondary)
+                                    }
+                                }
                             }
                             .padding(10).frame(maxWidth: .infinity, alignment: .leading)
                             .background(selectedGroupID == group.id ? Color.accentColor.opacity(0.08) : .clear,
@@ -114,6 +140,9 @@ struct SavedWallpapersView: View {
                             if let original = group.original {
                                 Button("Quick Look") { quickLookURL = original.originalURL }
                                 Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([original.originalURL]) }
+                                Divider()
+                                Button("Delete Picture…", role: .destructive) { pictureToDelete = group }
+                                    .disabled(model.historyPictureIsInUse(group.id))
                             }
                         }
                         .id(group.id)
@@ -144,10 +173,15 @@ struct SavedWallpapersView: View {
     private var selectionDetail: some View {
         VStack(alignment: .leading, spacing: 12) {
             if let group = selectedGroup, let original = group.original {
-                Text(group.name).font(.headline)
+                HStack {
+                    Text(group.name).font(.headline)
+                    Spacer()
+                    Text("Original picture").font(.callout).foregroundStyle(.secondary)
+                }
                 SavedWallpaperThumbnail(url: original.originalURL, contentMode: .fit,
                                         maximumPixelSize: 1_600, revision: original.importedAt)
                     .id(original.originalURL).frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipShape(.rect(cornerRadius: 10))
                 Text("Your idea").font(.headline)
                 ScrollView {
                     Text(idea(for: group)).font(.body).textSelection(.enabled)

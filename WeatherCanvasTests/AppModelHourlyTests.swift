@@ -963,6 +963,69 @@ final class AppModelHourlyTests: XCTestCase {
     }
 
     @MainActor
+    func testDeletingUnusedPictureRemovesSavedVariationsButKeepsUserFileDesktopAndUsage() throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        fake.settings.automaticUpdates = false
+        let userDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: userDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: userDirectory) }
+        let original = userDirectory.appendingPathComponent("old-picture.jpg")
+        try Data("user-owned original".utf8).write(to: original)
+        var history = PictureHistory(directory: fake.directory.appendingPathComponent("History"))
+        try history.record(digest: "old-picture", name: "Old picture", originalURL: original)
+        var oldSettings = fake.settings
+        oldSettings.sourcePath = original.path
+        oldSettings.sourceDigest = "old-picture"
+        let variation = fake.directory.appendingPathComponent("old-variation.png")
+        try Data("old generated variation".utf8).write(to: variation)
+        var cache = HourWallpaperCache(directory: fake.directory)
+        try cache.record(pictureID: "old-picture", recipeID: HourWallpaperCache.recipeID(for: oldSettings), hour: 12,
+            weather: WeatherSnapshot(label: "clear", symbol: "sun.max", fetchedAt: fake.clock), url: variation,
+            settingsSnapshot: oldSettings, sourceDigest: "old-picture", sourcePicturePath: original.path)
+        let model = fake.model()
+        defer { model.stopBackgroundTasks() }
+        let before = model.settings
+        let desktop = model.displayedImageURL
+        XCTAssertFalse(model.historyPictureIsInUse("old-picture"))
+        try model.deleteHistoryPicture(digest: "old-picture")
+        XCTAssertFalse(model.pictureHistoryEntries.contains { $0.digest == "old-picture" })
+        XCTAssertFalse(FileManager.default.fileExists(atPath: variation.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: original.path))
+        XCTAssertEqual(model.settings, before)
+        XCTAssertEqual(model.displayedImageURL, desktop)
+        XCTAssertTrue(fake.created.isEmpty)
+        XCTAssertTrue(fake.applied.isEmpty)
+        XCTAssertEqual(fake.ledger.count(on: fake.clock), 0)
+        let restored = fake.model()
+        defer { restored.stopBackgroundTasks() }
+        XCTAssertFalse(restored.pictureHistoryEntries.contains { $0.digest == "old-picture" })
+        XCTAssertTrue(restored.savedWallpaperGroups.isEmpty)
+    }
+
+    @MainActor
+    func testDeletingCurrentPictureOrOriginalStillOnDesktopIsRefused() throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        fake.settings.automaticUpdates = false
+        let model = fake.model()
+        defer { model.stopBackgroundTasks() }
+        XCTAssertTrue(model.historyPictureIsInUse("fake-picture"))
+        XCTAssertThrowsError(try model.deleteHistoryPicture(digest: "fake-picture"))
+        let another = fake.directory.appendingPathComponent("another.jpg")
+        try Data("another original".utf8).write(to: another)
+        var updated = model.settings
+        updated.sourcePath = another.path; updated.sourceDigest = "another"
+        model.settings = updated
+        XCTAssertTrue(model.historyPictureIsInUse("fake-picture"))
+        XCTAssertThrowsError(try model.deleteHistoryPicture(digest: "fake-picture"))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: fake.source.path))
+        XCTAssertEqual(model.displayedImageURL, fake.source)
+        XCTAssertTrue(fake.created.isEmpty)
+        XCTAssertEqual(fake.ledger.count(on: fake.clock), 0)
+    }
+
+    @MainActor
     func testCurrentWeatherIsIndependentOfSavedHourAndRefreshesWithoutPaidJobs() async throws {
         let fake = try AppHourlyFake()
         defer { fake.removeFiles() }
@@ -972,8 +1035,10 @@ final class AppModelHourlyTests: XCTestCase {
         let model = fake.model()
         defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
         model.browseSavedVariation(direction: 1)
+        XCTAssertEqual(model.menuWeatherStatus, "Weather now · Unavailable")
         await model.refreshWorkspaceWeather()
         XCTAssertEqual(model.workspaceWeather?.label, "rainy")
+        XCTAssertEqual(model.menuWeatherStatus, "Weather now · Rainy")
         XCTAssertEqual(model.previewWeather?.label, "clear")
         for _ in 0..<10 { await model.refreshWorkspaceWeather() }
         XCTAssertEqual(fake.weatherCalls, 1)
@@ -986,6 +1051,7 @@ final class AppModelHourlyTests: XCTestCase {
         model.settings.weatherChoice = .snow
         await model.refreshWorkspaceWeather()
         XCTAssertEqual(model.workspaceWeather?.label, WeatherChoice.snow.rawValue)
+        XCTAssertEqual(model.menuWeatherStatus, "Fixed weather · \(WeatherChoice.snow.rawValue.capitalized)")
         XCTAssertEqual(fake.weatherCalls, 2)
     }
 

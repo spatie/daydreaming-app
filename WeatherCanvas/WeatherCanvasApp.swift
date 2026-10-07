@@ -227,6 +227,9 @@ private struct MenuBarContent: View {
         Text(model.menuUpdateStatus ?? "Ready when you are")
             .help([model.detail, model.lastGenerationMenuLabel].filter { !$0.isEmpty }.joined(separator: "\n"))
             .disabled(true)
+        Label(model.menuWeatherStatus, systemImage: model.workspaceWeather?.symbol ?? "cloud")
+            .help("Weather data: MET Norway. Uses the latest local forecast.")
+            .disabled(true)
     }
 
     private func present(_ presentation: MainPresentation) {

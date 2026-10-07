@@ -13,6 +13,7 @@ struct PictureHistory: Sendable {
     let directory: URL
     private(set) var entries: [Entry]
     private let unreadableIndex: Bool
+    var hasUnreadableIndex: Bool { unreadableIndex }
     private var indexURL: URL { directory.appendingPathComponent("picture-history.json") }
 
     init(directory: URL) {
@@ -25,6 +26,14 @@ struct PictureHistory: Sendable {
     }
 
     func entry(for digest: String) -> Entry? { entries.first { $0.digest == digest } }
+
+    mutating func remove(digest: String) throws {
+        guard !unreadableIndex else { throw PictureHistoryError.unreadableHistory }
+        let updated = entries.filter { $0.digest != digest }
+        guard updated != entries else { return }
+        try JSONEncoder().encode(updated).write(to: indexURL, options: .atomic)
+        entries = updated
+    }
 
     mutating func record(digest: String, name: String, originalURL: URL, importedAt: Date = .now) throws {
         guard !unreadableIndex else { throw PictureHistoryError.unreadableHistory }
@@ -46,11 +55,12 @@ struct PictureHistory: Sendable {
 }
 
 enum PictureHistoryError: LocalizedError {
-    case invalidOriginal, unreadableHistory
+    case invalidOriginal, unreadableHistory, pictureInUse
     var errorDescription: String? {
         switch self {
         case .invalidOriginal: "The original picture could not be found."
         case .unreadableHistory: "The picture history could not be read. Your saved pictures are still on this Mac."
+        case .pictureInUse: "This picture is in use. Choose another picture before deleting it."
         }
     }
 }
