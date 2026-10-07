@@ -38,6 +38,7 @@ struct WindowViewport: NSViewRepresentable {
             let names: [Notification.Name] = [NSWindow.didChangeScreenNotification, NSWindow.didChangeOcclusionStateNotification,
                 NSWindow.didMiniaturizeNotification, NSWindow.didDeminiaturizeNotification,
                 NSApplication.didBecomeActiveNotification, NSApplication.didResignActiveNotification,
+                NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification,
                 .NSProcessInfoPowerStateDidChange]
             for name in names {
                 observers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in

@@ -1054,8 +1054,10 @@ final class AppModelHourlyTests: XCTestCase {
         let desktop = model.displayedImageURL
         let pending = fake.pending
         let ledger = fake.ledger
+        model.setPreviewHour(16)
         XCTAssertEqual(model.savedVariationsForSelectedPicture.count, 3)
         for _ in 0..<8 { model.browseSavedVariation(direction: 1) }
+        model.resumeSelectedPreviewIfNeeded()
         XCTAssertEqual(model.selectedSavedWallpaper?.entry.hour, 10)
         XCTAssertTrue(model.isBrowsingSavedVariations)
         XCTAssertTrue(model.savedVariationCaption?.contains("3 of 3") == true)
@@ -1068,6 +1070,7 @@ final class AppModelHourlyTests: XCTestCase {
         XCTAssertTrue(fake.applied.isEmpty)
         XCTAssertEqual(fake.sleeper.sleepCalls, 0)
         for _ in 0..<8 { model.browseSavedVariation(direction: -1) }
+        model.resumeSelectedPreviewIfNeeded()
         XCTAssertEqual(model.selectedSavedWallpaper?.entry.hour, 12)
         model.backToLivePreview()
         XCTAssertFalse(model.isBrowsingSavedVariations)
@@ -2441,6 +2444,36 @@ final class AppModelHourlyTests: XCTestCase {
         model.endScrubbingPreview(hour: 19)
         XCTAssertEqual(fake.sleeper.sleepCalls, 2)
         XCTAssertEqual(fake.created.count, 1)
+    }
+
+    @MainActor
+    func testReturningToSelectedHourResumesOnePreviewAndReusesItsCache() async throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        fake.settings.automaticUpdates = false
+        fake.previewWindowActive = false
+        let model = fake.model()
+        defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+        model.endScrubbingPreview(hour: 16)
+        model.resumeSelectedPreviewIfNeeded()
+        XCTAssertEqual(fake.sleeper.sleepCalls, 0)
+        XCTAssertTrue(fake.created.isEmpty)
+        fake.previewWindowActive = true
+        model.resumeSelectedPreviewIfNeeded()
+        model.resumeSelectedPreviewIfNeeded()
+        await appEventually { fake.sleeper.waitingCount == 1 }
+        XCTAssertEqual(fake.sleeper.sleepCalls, 1)
+        fake.sleeper.wakeAll()
+        await appEventually { fake.created.count == 1 && !model.isGenerating }
+        model.resumeSelectedPreviewIfNeeded()
+        XCTAssertEqual(fake.created.first?.hour, 16)
+        XCTAssertEqual(fake.created.first?.renderProfile, .quickPreview)
+        XCTAssertEqual(fake.sleeper.sleepCalls, 1)
+        XCTAssertEqual(fake.ledger.count(on: fake.clock), 1)
+        XCTAssertTrue(fake.applied.isEmpty)
+        model.backToNow()
+        model.resumeSelectedPreviewIfNeeded()
+        XCTAssertEqual(fake.sleeper.sleepCalls, 1)
     }
 
     @MainActor

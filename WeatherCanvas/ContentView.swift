@@ -60,7 +60,7 @@ struct ContentView: View {
             model.setPreviewWindow(window)
             let name = window.screen?.localizedName ?? "this display"
             let multiple = NSScreen.screens.count > 1
-            let effectsActive = NSApp.isActive && window.isVisible && !window.isMiniaturized
+            let effectsActive = NSApp.isActive && window.isKeyWindow && window.isVisible && !window.isMiniaturized
                 && window.occlusionState.contains(.visible)
             let lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
             let visible = window.screen?.visibleFrame.size ?? CGSize(width: 1440, height: 900)
@@ -83,9 +83,14 @@ struct ContentView: View {
             }
         }))
         .onChange(of: waitingEffectsActive) { _, active in
-            if active { Task { await model.refreshWorkspaceWeather() } }
+            if active {
+                Task {
+                    await model.refreshWorkspaceWeather()
+                    model.resumeSelectedPreviewIfNeeded()
+                }
+            }
         }
-        .navigationTitle("Daydreaming")
+        .navigationTitle(AppRuntime.isPreview ? "Daydreaming Preview" : "Daydreaming")
         .toolbar { mainToolbar }
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .background {
@@ -394,12 +399,6 @@ struct ContentView: View {
                             if let reason = model.draftCreationUnavailableReason {
                                 Text(reason).font(.callout).foregroundStyle(.secondary)
                                     .multilineTextAlignment(.center)
-                            }
-                            if model.hasImageConnection && model.canCreateDraft {
-                                Button("Make Preview") { model.schedulePreviewGeneration(hour: displayedHour, explicit: true) }
-                                    .help(model.usageHelp)
-                            } else if model.hasImageConnection {
-                                Button("Change Limit…") { SettingsWindowController.show(model: model, pane: .wallpapers) }.buttonStyle(.borderless)
                             }
                         }
                         .padding(22).frame(maxWidth: 320)

@@ -1756,6 +1756,13 @@ final class AppModel: ObservableObject {
         schedulePreviewGeneration(hour: hour)
     }
 
+    func resumeSelectedPreviewIfNeeded() {
+        guard let hour = selectedPreviewHour, !isBrowsingSavedVariations, selectedSavedWallpaper == nil,
+              pendingPromptDraftText == nil, draftPreviewSettings == nil,
+              activity != .failed, !isCreatingVisiblePreview else { return }
+        schedulePreviewGeneration(hour: hour)
+    }
+
     func schedulePreviewGeneration(hour: Int, explicit: Bool = false) {
         cancelPlannedPreviewGeneration()
         let isNow = selectedPreviewHour == nil && hour == Calendar.current.component(.hour, from: pipelineNow)
