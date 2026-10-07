@@ -82,6 +82,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var generatedToday = 0
     @Published private(set) var generationStorageError: String?
     @Published private(set) var currentLocalWeather: WeatherSnapshot?
+    @Published private(set) var weatherLocationName: String?
     private var nextWorkspaceWeatherRefresh = Date.distantPast
     @Published private(set) var latestWeather: WeatherSnapshot?
     @Published private(set) var launchAtLogin = false
@@ -330,6 +331,8 @@ final class AppModel: ObservableObject {
         locationReader.onLocation = { [weak self] in
             guard let self else { return }
             self.refreshOnboardingLocation()
+            if self.locationReader.freshLocation == nil { self.currentLocalWeather = nil }
+            self.nextWorkspaceWeatherRefresh = .distantPast
             if self.onboardingComplete { Task { await self.refreshWorkspaceWeather() } }
             guard self.onboardingComplete, self.settings.automaticUpdates || self.pendingManualGeneration else { return }
             if self.pendingManualGeneration && Date() > self.manualRequestExpiresAt { self.pendingManualGeneration = false }
@@ -343,6 +346,11 @@ final class AppModel: ObservableObject {
             let manual = self.pendingManualGeneration
             let force = manual && self.pendingForceFresh
             Task { await self.refreshIfNeeded(force: force, userInitiated: manual) }
+        }
+
+        locationReader.onPlaceName = { [weak self] in
+            guard let self else { return }
+            self.weatherLocationName = self.locationReader.placeName
         }
 
         wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
@@ -947,13 +955,26 @@ final class AppModel: ObservableObject {
         return "\(title) · \(workspaceWeather?.label.capitalized ?? "Unavailable")"
     }
 
+    var weatherLocationStatus: String {
+        if let weatherLocationName { return weatherLocationName }
+        switch locationReader.authorizationStatus {
+        case .denied, .restricted: return "Location access is off"
+        default: return locationReader.freshLocation == nil ? "Finding your location…" : "Local area"
+        }
+    }
+
+    func refreshWeatherLocation() {
+        guard !isDesignPreview else { return }
+        locationReader.request(force: true)
+    }
+
     func refreshWorkspaceWeather() async {
         guard onboardingComplete, settings.weatherChoice == .automatic, isPreviewWindowActive,
               (!isDesignPreview || hourlyServices != nil), pipelineNow >= nextWorkspaceWeatherRefresh else { return }
         if hourlyServices == nil {
             let authorization = locationReader.authorizationStatus
             guard authorization == .authorized || authorization == .authorizedAlways else { return }
-            if locationReader.location == nil { locationReader.request(); return }
+            if locationReader.freshLocation == nil { locationReader.request(); return }
         }
         nextWorkspaceWeatherRefresh = pipelineNow.addingTimeInterval(900)
         do {
@@ -2776,7 +2797,7 @@ final class AppModel: ObservableObject {
     private func weatherSnapshot(choice: WeatherChoice, date: Date) async throws -> WeatherSnapshot {
         if let hourlyServices { return try await hourlyServices.weather(choice, date) }
         guard choice == .automatic else { return WeatherSnapshot(label: choice.rawValue, symbol: choice.symbol, fetchedAt: .now) }
-        guard let location = locationReader.location else {
+        guard let location = locationReader.freshLocation else {
             locationReader.request()
             if locationReader.authorizationStatus == .denied || locationReader.authorizationStatus == .restricted {
                 throw WeatherContextError.locationPermissionRequired

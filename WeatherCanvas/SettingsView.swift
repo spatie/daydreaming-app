@@ -260,6 +260,17 @@ struct SettingsView: View {
                 LabeledContent("Today", value: model.usageCountLabel)
                     .foregroundStyle(.secondary)
             }
+            Section("Local Weather") {
+                LabeledContent("Location", value: model.weatherLocationStatus)
+                LabeledContent("Forecast", value: model.workspaceWeather?.label.capitalized ?? "Unavailable")
+                if let weather = model.workspaceWeather {
+                    LabeledContent("Retrieved", value: weather.fetchedAt.formatted(date: .abbreviated, time: .shortened))
+                        .foregroundStyle(.secondary)
+                }
+                Button("Refresh Location") { model.refreshWeatherLocation() }
+                Text("Forecast from MET Norway. macOS provides your approximate location; Apple Maps identifies the place.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             if let lastUpdated = model.lastUpdated {
                 Section("Your Desktop") {
                     LabeledContent("Last Updated", value: lastUpdated.formatted(date: .abbreviated, time: .shortened))

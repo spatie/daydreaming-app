@@ -1,3 +1,4 @@
+import CoreLocation
 import XCTest
 @testable import Daydreaming
 
@@ -57,6 +58,80 @@ final class HourlyWeatherForecastTests: XCTestCase {
         XCTAssertEqual(HourlyWeatherForecast.select(date: requested, now: now, current: current, forecast: forecast, calendar: calendar), predicted)
     }
 
+    func testFairAndPartlyCloudyAreNotOvercast() {
+        XCTAssertEqual(WeatherContextProvider.label(for: "clearsky_day"), "clear")
+        XCTAssertEqual(WeatherContextProvider.label(for: "fair_day"), "mostly clear")
+        XCTAssertEqual(WeatherContextProvider.label(for: "fair_night"), "mostly clear")
+        XCTAssertEqual(WeatherContextProvider.label(for: "partlycloudy_day"), "partly cloudy")
+        XCTAssertEqual(WeatherContextProvider.label(for: "cloudy"), "cloudy")
+        XCTAssertEqual(WeatherContextProvider.label(for: "lightrainshowers_day"), "rainy")
+        XCTAssertEqual(WeatherContextProvider.label(for: "snowshowers_night"), "snowy")
+    }
+
+    func testLocationMustBeRecentAndHaveValidAccuracy() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        func location(age: TimeInterval, accuracy: Double = 1_000) -> CLLocation {
+            CLLocation(coordinate: CLLocationCoordinate2D(latitude: 50, longitude: 4), altitude: 0,
+                       horizontalAccuracy: accuracy, verticalAccuracy: -1, timestamp: now.addingTimeInterval(-age))
+        }
+        XCTAssertTrue(LocalWeatherLocationPolicy.isFresh(location(age: 899), now: now))
+        XCTAssertFalse(LocalWeatherLocationPolicy.isFresh(location(age: 900), now: now))
+        XCTAssertFalse(LocalWeatherLocationPolicy.isFresh(location(age: 0, accuracy: -1), now: now))
+        XCTAssertFalse(LocalWeatherLocationPolicy.isFresh(location(age: 0, accuracy: 50_000), now: now))
+        XCTAssertFalse(LocalWeatherLocationPolicy.isFresh(location(age: -120), now: now))
+    }
+
+    @MainActor
+    func testCurrentWeatherUsesPresentHourAndAdvancesInsideCachedResponse() async throws {
+        let calendar = utcCalendar()
+        let now = try date(day: 5, hour: 11, minute: 55, calendar: calendar)
+        let spy = ForecastTransportSpy()
+        let provider = WeatherContextProvider { request in try await spy.fetch(request) }
+        let location = CLLocation(latitude: 50, longitude: 4)
+        let first = try await provider.current(at: location, now: now)
+        XCTAssertEqual(first.label, "mostly clear")
+        let later = now.addingTimeInterval(600)
+        let current = try await provider.current(at: location, now: later)
+        XCTAssertEqual(current.label, "partly cloudy")
+        XCTAssertEqual(current.fetchedAt, now)
+        XCTAssertEqual(provider.cachedWeather(at: later, now: later)?.label, "partly cloudy")
+        let calls = await spy.calls
+        XCTAssertEqual(calls, 1)
+    }
+
+    @MainActor
+    func testNotModifiedAndOfflineFallbackStillUsePresentHour() async throws {
+        let calendar = utcCalendar()
+        let now = try date(day: 5, hour: 11, minute: 55, calendar: calendar)
+        let spy = ForecastTransportSpy()
+        let provider = WeatherContextProvider { request in try await spy.fetch(request) }
+        let location = CLLocation(latitude: 50, longitude: 4)
+        _ = try await provider.current(at: location, now: now)
+        await spy.setStatus(304)
+        let refreshed = try await provider.current(at: location, now: now.addingTimeInterval(1_000))
+        XCTAssertEqual(refreshed.label, "partly cloudy")
+        await spy.setStatus(503)
+        let fallback = try await provider.current(at: location, now: now.addingTimeInterval(2_000))
+        XCTAssertEqual(fallback.label, "partly cloudy")
+        let calls = await spy.calls
+        XCTAssertEqual(calls, 3)
+    }
+
+    @MainActor
+    func testChangingLocationBypassesCachedForecast() async throws {
+        let calendar = utcCalendar()
+        let now = try date(day: 5, hour: 11, minute: 55, calendar: calendar)
+        let spy = ForecastTransportSpy()
+        let provider = WeatherContextProvider { request in try await spy.fetch(request) }
+        _ = try await provider.current(at: CLLocation(latitude: 50, longitude: 4), now: now)
+        _ = try await provider.current(at: CLLocation(latitude: 51, longitude: 5), now: now.addingTimeInterval(1))
+        let calls = await spy.calls
+        XCTAssertEqual(calls, 2)
+        let requests = await spy.requests
+        XCTAssertTrue(requests[1].url?.query?.contains("lat=51.00") == true)
+        XCTAssertNil(requests[1].value(forHTTPHeaderField: "If-Modified-Since"))
+    }
+
     private func utcCalendar() -> Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -69,5 +144,26 @@ final class HourlyWeatherForecastTests: XCTestCase {
 
     private func snapshot(_ label: String, at date: Date) -> WeatherSnapshot {
         WeatherSnapshot(label: label, symbol: "cloud", fetchedAt: date)
+    }
+}
+
+private actor ForecastTransportSpy {
+    private(set) var calls = 0
+    private(set) var requests: [URLRequest] = []
+    private var status = 200
+    func setStatus(_ value: Int) { status = value }
+    func fetch(_ request: URLRequest) throws -> (Data, URLResponse) {
+        calls += 1
+        requests.append(request)
+        let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: "HTTP/1.1",
+                                       headerFields: ["Last-Modified": "Mon, 05 Oct 2026 10:00:00 GMT"])!
+        let data = Data("""
+        {"properties":{"timeseries":[
+          {"time":"2026-10-05T10:00:00Z","data":{"next_1_hours":{"summary":{"symbol_code":"cloudy"}}}},
+          {"time":"2026-10-05T11:00:00Z","data":{"next_1_hours":{"summary":{"symbol_code":"fair_day"}}}},
+          {"time":"2026-10-05T12:00:00Z","data":{"next_1_hours":{"summary":{"symbol_code":"partlycloudy_day"}}}}
+        ]}}
+        """.utf8)
+        return (data, response)
     }
 }

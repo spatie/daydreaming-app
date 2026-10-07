@@ -16,7 +16,7 @@ Crop keeps the sidebar and preview workspace intact. The original moves under a 
 
 Vertical scrolling over the artwork browses the selected original's saved variations, newest first, without generating, applying, changing settings or cancelling queued work. Momentum is ignored and trackpad steps are rate-limited. A Saved caption identifies the hour, day and position, and Back to Live or Escape exits. The slider and idea editor also exit saved browsing. VoiceOver adjustable actions and focused-picture arrow keys browse the same saved set.
 
-The weather row says Now for the local MET Norway forecast, independently of the previewed hour. Display refreshes use the existing cache at most once per 15 minutes while active, without paid work. Missing weather offers an explicit location-access action.
+The weather row says Now for the local MET Norway forecast, independently of the previewed hour. Display refreshes use the existing cache at most once per 15 minutes while active, without paid work. The current forecast advances to the present hour even while the HTTP response remains cached. Location fixes must be recent (less than 15 minutes) and have valid accuracy; stale fixes are requested again. Fair and partly cloudy skies remain distinct from overcast. Settings shows the approximate place, forecast retrieval time, and a location refresh action. Apple Maps resolves the place name; coordinates are not persisted by Daydreaming. Missing weather offers an explicit location-access action.
 
 ## Setup and preferences
 
