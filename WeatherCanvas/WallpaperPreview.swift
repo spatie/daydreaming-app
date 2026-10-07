@@ -20,7 +20,7 @@ struct WallpaperPreview: View {
 
     var body: some View {
         GeometryReader { geometry in
-            ZStack {
+            let canvas = ZStack {
                 if displayAspectRatio == nil || image == nil || backdropOnly {
                     Color(nsColor: .windowBackgroundColor)
                 }
@@ -49,7 +49,11 @@ struct WallpaperPreview: View {
                 }
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
-            .clipShape(.rect(cornerRadius: fullBleed ? 0 : 16))
+            if displayAspectRatio != nil && image != nil && !backdropOnly {
+                canvas
+            } else {
+                canvas.clipShape(.rect(cornerRadius: fullBleed ? 0 : 16))
+            }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(label)
@@ -99,6 +103,7 @@ private struct SoftArtworkBackdrop: View {
 struct ScreenFramedArtwork: View {
     let image: CGImage
     let displayAspectRatio: CGFloat
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         GeometryReader { geometry in
@@ -110,11 +115,11 @@ struct ScreenFramedArtwork: View {
                         .frame(width: rect.width, height: rect.height)
                         .frame(width: layout.frameSize.width, height: layout.frameSize.height)
                         .clipShape(.rect(cornerRadius: 10))
-                        .shadow(color: .black.opacity(0.18), radius: 12, y: 5)
+                        .shadow(color: .black.opacity(colorScheme == .dark ? 0.26 : 0.12), radius: 18, y: 8)
+                        .shadow(color: .black.opacity(0.08), radius: 2, y: 1)
                 }
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
-            .clipped()
         }
         .accessibilityHidden(true)
     }
