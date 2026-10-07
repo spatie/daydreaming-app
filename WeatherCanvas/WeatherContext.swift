@@ -118,9 +118,9 @@ enum WeatherContextError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .waitingForLocation:
-            "Waiting for your location to load. You can also choose a weather condition manually."
+            "Waiting for your location. You can also choose a fixed weather location."
         case .locationPermissionRequired:
-            "Allow location access in System Settings, or choose a weather condition manually."
+            "Allow location access in System Settings, or choose a fixed weather location."
         case .forecastUnavailable:
             "Weather data is unavailable right now. Your current wallpaper stays in place."
         }
@@ -142,7 +142,8 @@ final class WeatherContextProvider {
         self.fetch = fetch
     }
 
-    func cachedWeather(at date: Date, now: Date = .now) -> WeatherSnapshot? {
+    func cachedWeather(at date: Date, now: Date = .now, location: CLLocation? = nil) -> WeatherSnapshot? {
+        if let location, cachedCoordinates != "\(Self.coordinate(location.coordinate.latitude)),\(Self.coordinate(location.coordinate.longitude))" { return nil }
         guard let current = currentSnapshot(at: now) else { return nil }
         return HourlyWeatherForecast.select(date: date, now: now, current: current, forecast: hourlyForecast)
     }
@@ -303,5 +304,44 @@ struct HourlyWeatherForecast: Equatable, Sendable {
         let currentHour = calendar.dateInterval(of: .hour, for: now)?.start ?? now
         guard hour > currentHour, calendar.isDate(date, inSameDayAs: now) else { return current }
         return forecast.first { calendar.isDate($0.date, equalTo: date, toGranularity: .hour) }?.weather ?? current
+    }
+}
+
+@MainActor
+enum WeatherPlaceLookup {
+    static func search(_ query: String) async throws -> [WeatherPlace] {
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        request.resultTypes = .address
+        let response = try await MKLocalSearch(request: request).start()
+        try Task.checkCancellation()
+        var seen = Set<String>()
+        return response.mapItems.compactMap { item in
+            let place = WeatherPlace(name: item.addressRepresentations?.cityWithContext(.full) ?? item.name ?? query,
+                                     latitude: item.location.coordinate.latitude, longitude: item.location.coordinate.longitude)
+            return place.isValid && seen.insert(place.id).inserted ? place : nil
+        }
+    }
+
+    static func named(_ place: WeatherPlace) async -> WeatherPlace {
+        // Resolve only the same rounded coordinates sent to the weather service.
+        let location = CLLocation(latitude: (place.latitude * 100).rounded() / 100,
+                                  longitude: (place.longitude * 100).rounded() / 100)
+        guard let request = MKReverseGeocodingRequest(location: location),
+              let items = try? await request.mapItems,
+              let name = items.first?.addressRepresentations?.cityWithContext(.full) else { return place }
+        return WeatherPlace(name: name, latitude: place.latitude, longitude: place.longitude)
+    }
+}
+
+extension WeatherLocationSelection {
+    func resolve(current: CLLocation?) throws -> CLLocation {
+        if let place = fixedPlace, place.isValid {
+            return CLLocation(latitude: place.latitude, longitude: place.longitude)
+        }
+        guard self == .current, let current, LocalWeatherLocationPolicy.isFresh(current) else {
+            throw WeatherContextError.waitingForLocation
+        }
+        return current
     }
 }

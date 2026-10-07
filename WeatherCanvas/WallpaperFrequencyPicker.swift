@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct WallpaperFrequencyPicker: View {
+    var stepNumber = 3
     @EnvironmentObject private var model: AppModel
     @State private var showingCustom = false
     @State private var amount = 1
@@ -8,7 +9,7 @@ struct WallpaperFrequencyPicker: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            CreationStepHeading(number: 3, title: "Wallpaper updates")
+            CreationStepHeading(number: stepNumber, title: "Wallpaper updates")
             HStack(spacing: 4) {
                 Picker("Wallpaper updates", selection: Binding(get: { model.settings.interval }, set: { interval in
                     if interval == .custom { editCustom() }

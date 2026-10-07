@@ -104,6 +104,36 @@ enum WeatherChoice: String, CaseIterable, Codable, Identifiable, Sendable {
     }
 }
 
+struct WeatherPlace: Codable, Equatable, Sendable, Identifiable {
+    let name: String
+    let latitude: Double
+    let longitude: Double
+
+    var isValid: Bool {
+        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && name.count <= 200
+            && latitude.isFinite && longitude.isFinite && (-90...90).contains(latitude) && (-180...180).contains(longitude)
+    }
+    var id: String { String(format: "%.2f,%.2f", locale: Locale(identifier: "en_US_POSIX"), latitude, longitude) }
+}
+
+enum WeatherLocationSelection: Codable, Equatable, Sendable {
+    case current
+    case fixed(WeatherPlace)
+
+    var fixedPlace: WeatherPlace? {
+        if case .fixed(let place) = self { return place }
+        return nil
+    }
+    var cacheIdentity: String? { fixedPlace.map { "weather-location:\($0.id)" } }
+    var isValid: Bool { fixedPlace?.isValid ?? true }
+}
+
+enum WallpaperAppearance: String, Codable, Sendable {
+    case light, dark
+
+    var title: String { self == .dark ? "Dark Mode" : "Light Mode" }
+}
+
 enum MainPresentation: Equatable {
     case picture, customize, original, savedWallpapers, crop
 }
@@ -129,7 +159,7 @@ enum WallpaperRecovery {
 
     var title: String {
         switch self {
-        case .weather: "Choose Weather…"
+        case .weather: "Weather Location…"
         case .apiKey: "Image AI Settings…"
         case .billing: "Check Image Provider Billing"
         case .image: "Choose a Picture…"
@@ -196,6 +226,8 @@ struct CanvasSettings: Codable, Equatable, Sendable {
     var interval: UpdateInterval = .hourly
     var customMinutes = 60
     var weatherChoice: WeatherChoice = .automatic
+    var weatherLocation: WeatherLocationSelection = .current
+    var systemAppearance: WallpaperAppearance?
     var model: ImageModel = .precise
     var quality: ImageQuality = .high
     var imageProvider: ImageProviderConfiguration = .openAI
@@ -238,7 +270,7 @@ struct CanvasSettings: Codable, Equatable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case sourcePath, uncroppedSourcePath, sourceCrop, sourceDigest, originalPictureDigest, pictureName, promptTemplate, style, extraInstructions, legacyCustomPrompt, interval, customMinutes
-        case weatherChoice, model, quality, imageProvider, imageProviderConfigurations, reuseMatchingImages, automaticUpdates
+        case weatherChoice, weatherLocation, systemAppearance, model, quality, imageProvider, imageProviderConfigurations, reuseMatchingImages, automaticUpdates
         case dailyGenerationLimit, promptFileBookmarks, unresolvedPromptFiles, contextSources
     }
 
@@ -278,6 +310,9 @@ struct CanvasSettings: Codable, Equatable, Sendable {
         interval = try values.decodeIfPresent(UpdateInterval.self, forKey: .interval) ?? .hourly
         customMinutes = try values.decodeIfPresent(Int.self, forKey: .customMinutes) ?? 60
         weatherChoice = try values.decodeIfPresent(WeatherChoice.self, forKey: .weatherChoice) ?? .automatic
+        let location = (try? values.decode(WeatherLocationSelection.self, forKey: .weatherLocation)) ?? .current
+        weatherLocation = location.isValid ? location : .current
+        systemAppearance = try values.decodeIfPresent(WallpaperAppearance.self, forKey: .systemAppearance)
         model = try values.decodeIfPresent(ImageModel.self, forKey: .model) ?? .precise
         quality = try values.decodeIfPresent(ImageQuality.self, forKey: .quality) ?? .high
         if let legacy = try? values.decode(String.self, forKey: .imageProvider) {
@@ -338,6 +373,8 @@ struct CanvasSettings: Codable, Equatable, Sendable {
         try values.encode(interval, forKey: .interval)
         try values.encode(customMinutes, forKey: .customMinutes)
         try values.encode(weatherChoice, forKey: .weatherChoice)
+        if weatherLocation != .current { try values.encode(weatherLocation, forKey: .weatherLocation) }
+        try values.encodeIfPresent(systemAppearance, forKey: .systemAppearance)
         try values.encode(model, forKey: .model)
         try values.encode(quality, forKey: .quality)
         try values.encode(imageProvider, forKey: .imageProvider)

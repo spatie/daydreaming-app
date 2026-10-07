@@ -39,7 +39,7 @@ final class AppModel: ObservableObject {
                 scheduledNextCheck = settings.nextWallpaperDate(after: pipelineNow)
                 withdrawUnpaidAutomaticWork()
             }
-            if settings.weatherChoice != oldValue.weatherChoice {
+            if settings.weatherChoice != oldValue.weatherChoice || settings.weatherLocation != oldValue.weatherLocation {
                 pendingManualGeneration = false
                 latestWeather = nil
                 currentLocalWeather = nil
@@ -160,6 +160,7 @@ final class AppModel: ObservableObject {
     private var scheduler: Task<Void, Never>?
     private var queueResumeTask: Task<Void, Never>?
     private var hasFinishedLoading = false
+    private var appearanceObservation: NSKeyValueObservation?
     private var hourCache: HourWallpaperCache?
     private var preparingHours = Set<String>()
     private struct PreparationRequest {
@@ -331,6 +332,7 @@ final class AppModel: ObservableObject {
         locationReader.onLocation = { [weak self] in
             guard let self else { return }
             self.refreshOnboardingLocation()
+            guard self.settings.weatherLocation == .current else { return }
             if self.locationReader.freshLocation == nil { self.currentLocalWeather = nil }
             self.nextWorkspaceWeatherRefresh = .distantPast
             if self.onboardingComplete { Task { await self.refreshWorkspaceWeather() } }
@@ -363,7 +365,11 @@ final class AppModel: ObservableObject {
 
         settings.retryUnresolvedPromptFiles()
         hourCache = HourWallpaperCache(directory: ImageStore.cacheDirectory)
+        synchronizeSystemAppearance()
         finishHourlyInitialization()
+        appearanceObservation = NSApp.observe(\.effectiveAppearance) { [weak self] _, _ in
+            Task { @MainActor in self?.synchronizeSystemAppearance() }
+        }
     }
 
     init(settings: CanvasSettings, hourlyServices: AppModelHourlyServices, nextScheduledCheck: Date? = nil,
@@ -844,7 +850,7 @@ final class AppModel: ObservableObject {
         let weather = previewForecasts[hour]?.label ?? (isNow ? workspaceWeather?.label : nil)
             ?? savedWeather ?? "local weather unavailable"
         let idea = pendingPromptDraftText ?? settings.promptTemplate
-        let instructions = PromptRenderer.renderHour(idea, date: hourDate(hour), weather: weather, style: settings.style)
+        let instructions = PromptRenderer.renderHour(idea, date: hourDate(hour), weather: weather, style: settings.style, appearance: settings.systemAppearance)
         return CodexHandoff.Request(sourceURL: sourceImageURL, instructions: instructions)
     }
 
@@ -956,6 +962,7 @@ final class AppModel: ObservableObject {
     }
 
     var weatherLocationStatus: String {
+        if let place = settings.weatherLocation.fixedPlace { return place.name }
         if let weatherLocationName { return weatherLocationName }
         switch locationReader.authorizationStatus {
         case .denied, .restricted: return "Location access is off"
@@ -963,24 +970,53 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func refreshWeatherLocation() {
+    var needsWeatherLocationAccess: Bool {
+        guard !isDesignPreview, settings.weatherLocation == .current else { return false }
+        let authorization = locationReader.authorizationStatus
+        return authorization != .authorized && authorization != .authorizedAlways
+    }
+
+    func synchronizeSystemAppearance() {
         guard !isDesignPreview else { return }
+        setSystemAppearance(NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? .dark : .light)
+    }
+
+    func setSystemAppearance(_ appearance: WallpaperAppearance) {
+        guard settings.systemAppearance != appearance else { return }
+        draftPreviewSettings?.systemAppearance = appearance
+        previousWallpaperRecipe?.systemAppearance = appearance
+        settings.systemAppearance = appearance
+    }
+
+    func refreshWeatherLocation() {
+        guard !isDesignPreview, settings.weatherLocation == .current else { return }
         locationReader.request(force: true)
+    }
+
+    func setWeatherLocation(_ location: WeatherLocationSelection) {
+        guard location.isValid, location != settings.weatherLocation else { return }
+        draftPreviewSettings?.weatherLocation = location
+        previousWallpaperRecipe?.weatherLocation = location
+        var updated = settings
+        updated.weatherLocation = location
+        settings = updated
+        Task { await refreshWorkspaceWeather() }
     }
 
     func refreshWorkspaceWeather() async {
         guard onboardingComplete, settings.weatherChoice == .automatic, isPreviewWindowActive,
               (!isDesignPreview || hourlyServices != nil), pipelineNow >= nextWorkspaceWeatherRefresh else { return }
-        if hourlyServices == nil {
+        if hourlyServices == nil && settings.weatherLocation == .current {
             let authorization = locationReader.authorizationStatus
             guard authorization == .authorized || authorization == .authorizedAlways else { return }
             if locationReader.freshLocation == nil { locationReader.request(); return }
         }
         nextWorkspaceWeatherRefresh = pipelineNow.addingTimeInterval(900)
+        let snapshotSettings = settings
         do {
-            let weather = try await weatherSnapshot(choice: .automatic, date: pipelineNow)
+            let weather = try await weatherSnapshot(settings: snapshotSettings, date: pipelineNow)
             try Task.checkCancellation()
-            guard settings.weatherChoice == .automatic else { return }
+            guard settings.weatherChoice == .automatic, settings.weatherLocation == snapshotSettings.weatherLocation else { return }
             currentLocalWeather = weather
         } catch {
             // Weather display never starts a wallpaper or interrupts the editor with an alert.
@@ -1379,7 +1415,7 @@ final class AppModel: ObservableObject {
     }
 
     var onboardingWeatherReady: Bool {
-        onboardingLocationState == .allowed
+        settings.weatherLocation.fixedPlace != nil || onboardingLocationState == .allowed
     }
 
     func useLocalWeather() {
@@ -1394,6 +1430,7 @@ final class AppModel: ObservableObject {
 
     func requestLocalWeatherAccess() {
         useLocalWeather()
+        if settings.weatherLocation.fixedPlace != nil { onboardingLocationState = .allowed; return }
         if isDesignPreview { onboardingLocationState = .allowed; return }
         switch locationReader.authorizationStatus {
         case .denied, .restricted:
@@ -1671,7 +1708,7 @@ final class AppModel: ObservableObject {
         if hour == Calendar.current.component(.hour, from: pipelineNow) { backToNow(); return }
         selectedPreviewHour = min(23, max(0, hour))
         if !isDesignPreview, settings.weatherChoice == .automatic,
-           let forecast = weatherProvider.cachedWeather(at: hourDate(selectedPreviewHour ?? hour)) {
+           let forecast = cachedForecast(at: hourDate(selectedPreviewHour ?? hour)) {
             previewForecasts[selectedPreviewHour ?? hour] = forecast
         }
         previewWeather = previewForecasts[selectedPreviewHour ?? hour]
@@ -1716,6 +1753,7 @@ final class AppModel: ObservableObject {
     }
 
     private func scheduleSettledGeneration(hour: Int?, explicit: Bool = false) {
+        synchronizeSystemAppearance()
         guard allowsHourlyPipeline, hasImageConnection, sourceImageURL != nil, isPreviewWindowActive else { return }
         let targetHour = hour ?? Calendar.current.component(.hour, from: pipelineNow)
         guard cachedPreview(hour: targetHour)?.needsUpdate != false else { return }
@@ -2136,7 +2174,7 @@ final class AppModel: ObservableObject {
     private func beginScheduling() {
         guard backgroundTasksAllowed else { return }
         scheduler?.cancel()
-        if hourlyServices == nil, onboardingComplete && settings.weatherChoice == .automatic {
+        if hourlyServices == nil, onboardingComplete && settings.weatherChoice == .automatic && settings.weatherLocation == .current {
             locationReader.request()
         }
 
@@ -2151,6 +2189,7 @@ final class AppModel: ObservableObject {
     }
 
     func refreshIfNeeded(force: Bool = false, userInitiated: Bool = false) async {
+        synchronizeSystemAppearance()
         guard !isPreparingForAppUpdate, onboardingComplete, allowsHourlyPipeline, hasImageConnection, stagedPictureURL == nil else { return }
         let now = pipelineNow
         let hour = Calendar.current.component(.hour, from: now)
@@ -2204,7 +2243,9 @@ final class AppModel: ObservableObject {
                                   forceFresh: Bool = false, additionalIntent: HourlyGenerationJob.Intent = [],
                                   renderProfile: GenerationRenderProfile = .wallpaper,
                                   settingsSnapshot: CanvasSettings? = nil, weatherOverride: WeatherSnapshot? = nil) async {
-        let snapshot = settingsSnapshot ?? (renderProfile == .quickPreview ? previewSettings : settings)
+        synchronizeSystemAppearance()
+        var snapshot = settingsSnapshot ?? (renderProfile == .quickPreview ? previewSettings : settings)
+        if !isDesignPreview { snapshot.systemAppearance = settings.systemAppearance }
         guard !isPreparingForAppUpdate, allowsHourlyPipeline, stagedPictureURL == nil, let sourcePath = snapshot.sourcePath,
               sourceAvailable(sourcePath), hasImageConnection else { return }
         if renderProfile == .quickPreview {
@@ -2241,7 +2282,7 @@ final class AppModel: ObservableObject {
             if generationQueue.current == nil { activity = .checkingWeather; status = "Checking weather" }
             let forecast = Task { [unowned self] in
                 if let weatherOverride { return weatherOverride }
-                return try await weatherSnapshot(choice: snapshot.weatherChoice, date: date)
+                return try await weatherSnapshot(settings: snapshot, date: date)
             }
             preparationTasks[base] = forecast
             let weather = try await forecast.value
@@ -2285,7 +2326,7 @@ final class AppModel: ObservableObject {
                 activity = .waitingForLocation
                 recovery = .weather
                 status = "Waiting for your location"
-                detail = "Allow location access, or choose a fixed condition."
+                detail = "Allow location access, or choose a fixed weather location."
             } else { show(error) }
             if request?.intent.contains(.manualWallpaper) == true { pendingManualGeneration = false }
             if request?.intent.intersection([.automaticWallpaper, .manualWallpaper]).isEmpty == false { scheduleRetry() }
@@ -2364,7 +2405,7 @@ final class AppModel: ObservableObject {
             budgetForJob: { [unowned self] in budgetForJob($0) },
             permitsPreview: { [unowned self] in isPreviewWindowActive },
             permitsDesktopApplication: { [unowned self] _ in currentProcessingDesktopRevision == desktopSelectionRevision },
-            weather: { [unowned self] job, date in try await weatherSnapshot(choice: job.settings.weatherChoice, date: date) },
+            weather: { [unowned self] job, date in try await weatherSnapshot(settings: job.settings, date: date) },
             canonicalize: { [unowned self] in generationQueue.updateCurrent($0) },
             latestIntent: { [unowned self] job in generationQueue.current.map { job.merged(with: $0) } ?? job },
             cached: { [unowned self] job in
@@ -2642,7 +2683,7 @@ final class AppModel: ObservableObject {
         }
         try validateSourceReading(job)
         let redacted = LocalPromptFileDetector.redactingPaths(in: job.settings.promptTemplate)
-        return PromptRenderer.renderHour(redacted, date: job.date, weather: job.weather.label, style: job.settings.style)
+        return PromptRenderer.renderHour(redacted, date: job.date, weather: job.weather.label, style: job.settings.style, appearance: job.settings.systemAppearance)
             + (blocks.isEmpty ? "" : "\n\n" + blocks.joined(separator: "\n\n"))
     }
 
@@ -2705,7 +2746,7 @@ final class AppModel: ObservableObject {
     }
 
     private func cachedPreview(hour: Int) -> HourWallpaperCache.Match? {
-        let forecast = isDesignPreview ? nil : weatherProvider.cachedWeather(at: hourDate(hour))
+        let forecast = isDesignPreview ? nil : cachedForecast(at: hourDate(hour))
         let snapshot = previewSettings
         let weather = snapshot.weatherChoice == .automatic ? (forecast ?? previewForecasts[hour])?.label
             : snapshot.weatherChoice.rawValue
@@ -2794,18 +2835,25 @@ final class AppModel: ObservableObject {
         nextRetryAt = pipelineNow.addingTimeInterval(TimeInterval(seconds))
     }
 
-    private func weatherSnapshot(choice: WeatherChoice, date: Date) async throws -> WeatherSnapshot {
+    private func cachedForecast(at date: Date) -> WeatherSnapshot? {
+        guard let location = try? settings.weatherLocation.resolve(current: settings.weatherLocation == .current ? locationReader.freshLocation : nil) else { return nil }
+        return weatherProvider.cachedWeather(at: date, location: location)
+    }
+
+    private func weatherSnapshot(settings snapshotSettings: CanvasSettings, date: Date) async throws -> WeatherSnapshot {
+        let choice = snapshotSettings.weatherChoice
         if let hourlyServices { return try await hourlyServices.weather(choice, date) }
         guard choice == .automatic else { return WeatherSnapshot(label: choice.rawValue, symbol: choice.symbol, fetchedAt: .now) }
-        guard let location = locationReader.freshLocation else {
+        if snapshotSettings.weatherLocation == .current && locationReader.freshLocation == nil {
             locationReader.request()
             if locationReader.authorizationStatus == .denied || locationReader.authorizationStatus == .restricted {
                 throw WeatherContextError.locationPermissionRequired
             }
             throw WeatherContextError.waitingForLocation
         }
+        let location = try snapshotSettings.weatherLocation.resolve(current: snapshotSettings.weatherLocation == .current ? locationReader.freshLocation : nil)
         let snapshot = try await weatherProvider.weather(at: date, location: location)
-        if Calendar.current.isDate(date, equalTo: pipelineNow, toGranularity: .hour) { latestWeather = snapshot; currentLocalWeather = snapshot }
+        if snapshotSettings.weatherLocation == settings.weatherLocation && Calendar.current.isDate(date, equalTo: pipelineNow, toGranularity: .hour) { latestWeather = snapshot; currentLocalWeather = snapshot }
         return snapshot
     }
 
@@ -2902,7 +2950,7 @@ final class AppModel: ObservableObject {
             activity = .failed
             recovery = .weather
             status = "Weather needs your attention"
-            detail = "Allow location access, or choose a fixed weather condition."
+            detail = "Allow location access, or choose a fixed weather location."
         } else if state == "limit" {
             settings.automaticUpdates = true
             generatedToday = dailyImageLimit

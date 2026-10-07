@@ -206,7 +206,7 @@ struct ContentView: View {
 
     private var creativeSidebar: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: compactWorkspace ? 18 : 28) {
+            VStack(alignment: .leading, spacing: compactWorkspace ? 16 : 22) {
                 VStack(alignment: .leading, spacing: 12) {
                     CreationStepHeading(number: 1, title: "Your picture")
                     Button { choosePicture() } label: {
@@ -229,7 +229,7 @@ struct ContentView: View {
                                 }
                             }
                         }
-                        .frame(height: compactWorkspace ? 100 : 140)
+                        .frame(height: compactWorkspace ? 84 : 120)
                         .clipShape(.rect(cornerRadius: 9))
                         .contentShape(.rect(cornerRadius: 9))
                     }
@@ -254,7 +254,13 @@ struct ContentView: View {
                 }
                 .accessibilityElement(children: .contain)
                 .accessibilityLabel("Your idea")
-                WallpaperFrequencyPicker()
+                VStack(alignment: .leading, spacing: 8) {
+                    CreationStepHeading(number: 3, title: "Weather location")
+                    WeatherLocationControls(compact: true)
+                }
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel("Weather location")
+                WallpaperFrequencyPicker(stepNumber: 4)
                 Spacer(minLength: 0)
             }
             .padding(22)
@@ -270,7 +276,7 @@ struct ContentView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
                     if isCropping { Text("Crop your original").font(.headline) }
-                    else { CreationStepHeading(number: 4, title: "Preview") }
+                    else { CreationStepHeading(number: 5, title: "Preview") }
                     if !isCropping {
                         if let caption = model.savedVariationCaption ?? model.shownPictureDescription {
                             Text(caption).font(.caption).foregroundStyle(.secondary).lineLimit(2)
@@ -431,7 +437,7 @@ struct ContentView: View {
             .help(model.imageCopy.ideaHelp)
             .popover(isPresented: $showingPromptHelp) {
                 Text(model.imageCopy.ideaHelp)
-                    .padding(16).frame(width: 270)
+                    .padding(16).frame(width: 300)
             }
         }
     }
@@ -776,7 +782,7 @@ struct ContentView: View {
         switch recovery {
         case .image: model.presentation = .picture
         case .retry: model.retryUpdate()
-        case .weather: model.requestLocalWeatherAccess()
+        case .weather: SettingsWindowController.show(model: model, pane: .wallpapers)
         case .apiKey: SettingsWindowController.show(model: model, pane: .imageAI)
         case .billing:
             if let url = model.imageProviderDescriptor?.billingURL { NSWorkspace.shared.open(url) }

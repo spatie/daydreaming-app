@@ -7,13 +7,14 @@ enum PromptRenderer {
             .replacingOccurrences(of: "{{weather}}", with: "the local weather")
     }
 
-    static func renderHour(_ template: String, date: Date, weather: String, style: WallpaperStyle = .natural) -> String {
+    static func renderHour(_ template: String, date: Date, weather: String, style: WallpaperStyle = .natural, appearance: WallpaperAppearance? = nil) -> String {
         let time = date.formatted(date: .omitted, time: .shortened)
         let rendered = template.replacingOccurrences(of: "{{time}}", with: time)
             .replacingOccurrences(of: "{{date}}", with: date.formatted(date: .complete, time: .omitted))
             .replacingOccurrences(of: "{{weather}}", with: weather)
         let styleNote = style == .natural ? "" : "\n\n" + style.prompt(extraInstructions: "")
-        return rendered + styleNote + "\n\nThe local time is " + time + ", and the weather is " + weather + ". Preserve the composition and main subjects so it remains recognizably the same picture."
+        let appearanceNote = appearance.map { "\n\nmacOS is currently in \($0.title). Use this context when the user asks the picture to follow Light or Dark Mode. Keep the requested time and weather accurate." } ?? ""
+        return rendered + styleNote + appearanceNote + "\n\nThe local time is " + time + ", and the weather is " + weather + ". Preserve the composition and main subjects so it remains recognizably the same picture."
     }
 
     static func render(_ template: String, context: RenderContext) -> String {

@@ -50,6 +50,8 @@ struct HourWallpaperCache: Sendable {
             settings.model.rawValue, settings.quality.rawValue, settings.weatherChoice.rawValue,
         ]
 
+        if let location = settings.weatherLocation.cacheIdentity { parts.append(location) }
+        if let appearance = settings.systemAppearance { parts.append("macos-appearance:" + appearance.rawValue) }
         if let crop = settings.sourceCrop { parts.append(cropFingerprint(crop)) }
         if let provider = settings.imageProvider.cacheIdentity { parts.append(provider) }
         if settings.promptTemplate.contains("{{date}}") || !PromptLinkDetector.urls(in: settings.promptTemplate).isEmpty
@@ -63,6 +65,8 @@ struct HourWallpaperCache: Sendable {
         var parts = [pictureID(for: settings), settings.promptTemplate, settings.style.rawValue,
                      settings.model.rawValue, settings.quality.rawValue, settings.weatherChoice.rawValue]
 
+        if let location = settings.weatherLocation.cacheIdentity { parts.append(location) }
+        if let appearance = settings.systemAppearance { parts.append("macos-appearance:" + appearance.rawValue) }
         if let crop = settings.sourceCrop { parts.append(cropFingerprint(crop)) }
         if let provider = settings.imageProvider.cacheIdentity { parts.append(provider) }
         return digest(parts.joined(separator: "\u{0}"))

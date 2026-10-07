@@ -23,6 +23,25 @@ enum ImageStore {
 
     static var cacheDirectory: URL { root.appendingPathComponent("Cache", isDirectory: true) }
 
+    static func pictureLocation(at url: URL) -> WeatherPlace? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let gps = properties[kCGImagePropertyGPSDictionary] as? [CFString: Any] else { return nil }
+        return pictureLocation(gps: gps)
+    }
+
+    static func pictureLocation(gps: [CFString: Any]) -> WeatherPlace? {
+        guard let latitude = gps[kCGImagePropertyGPSLatitude] as? NSNumber,
+              let longitude = gps[kCGImagePropertyGPSLongitude] as? NSNumber,
+              let latitudeRef = gps[kCGImagePropertyGPSLatitudeRef] as? String,
+              let longitudeRef = gps[kCGImagePropertyGPSLongitudeRef] as? String,
+              ["N", "S"].contains(latitudeRef.uppercased()), ["E", "W"].contains(longitudeRef.uppercased()) else { return nil }
+        let place = WeatherPlace(name: "Picture location",
+                                 latitude: abs(latitude.doubleValue) * (latitudeRef.uppercased() == "S" ? -1 : 1),
+                                 longitude: abs(longitude.doubleValue) * (longitudeRef.uppercased() == "W" ? -1 : 1))
+        return place.isValid ? place : nil
+    }
+
     static func owns(_ path: String) -> Bool {
         let normalized = URL(fileURLWithPath: path).standardizedFileURL.path
         return normalized.hasPrefix(root.standardizedFileURL.path + "/")

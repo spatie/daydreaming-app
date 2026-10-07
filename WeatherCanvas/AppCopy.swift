@@ -16,7 +16,7 @@ struct ImageGenerationCopy {
     private var name: String { provider?.name ?? "your image provider" }
     private var credit: String { provider?.creditName ?? "your image provider's credit" }
     var ideaPreviewNotice: String { "After you stop typing, your picture and idea go to \(name) for a preview. New images use credit." }
-    var ideaHelp: String { "Describe the feeling or changes you want. Daydreaming adds time and local weather. Making a preview sends your picture, idea, and included text to \(name). New images use \(credit)." }
+    var ideaHelp: String { "Describe how your picture should change. We add the preview time, weather at your chosen location, and whether macOS is in Light or Dark Mode.\n\nFor example: \"Keep the scene natural in Light Mode, and use softer, darker colors in Dark Mode.\"" }
     var previewTimeHelp: String { "After you stop moving the slider, Daydreaming makes a preview for that hour using \(credit). Your desktop keeps following the current time." }
     var historyChoiceNotice: String { "Reuses a saved preview or makes one using \(credit). Your desktop stays unchanged." }
     func cropDoneNotice(hasChanges: Bool) -> String {

@@ -1,4 +1,6 @@
 import CoreLocation
+import ImageIO
+import UniformTypeIdentifiers
 import XCTest
 @testable import Daydreaming
 
@@ -129,7 +131,76 @@ final class HourlyWeatherForecastTests: XCTestCase {
         XCTAssertEqual(calls, 2)
         let requests = await spy.requests
         XCTAssertTrue(requests[1].url?.query?.contains("lat=51.00") == true)
+        XCTAssertNil(provider.cachedWeather(at: now, now: now, location: CLLocation(latitude: 50, longitude: 4)))
         XCTAssertNil(requests[1].value(forHTTPHeaderField: "If-Modified-Since"))
+    }
+
+    func testFixedLocationWorksWithoutCurrentLocationAndSurvivesSettingsRoundTrip() throws {
+        let place = WeatherPlace(name: "Example town", latitude: 40, longitude: -70)
+        var settings = CanvasSettings()
+        settings.weatherLocation = .fixed(place)
+        settings.promptTemplate = "Keep my custom idea"
+        let restored = try JSONDecoder().decode(CanvasSettings.self, from: JSONEncoder().encode(settings))
+        XCTAssertEqual(restored.weatherLocation, .fixed(place))
+        XCTAssertEqual(restored.promptTemplate, "Keep my custom idea")
+        let resolved = try restored.weatherLocation.resolve(current: nil)
+        XCTAssertEqual(resolved.coordinate.latitude, 40)
+        XCTAssertEqual(resolved.coordinate.longitude, -70)
+        XCTAssertThrowsError(try WeatherLocationSelection.current.resolve(current: nil))
+    }
+
+    func testOldAndInvalidLocationSettingsPreserveTheIdeaAndUseCurrentLocation() throws {
+        XCTAssertEqual(try JSONDecoder().decode(CanvasSettings.self, from: Data("{}".utf8)).weatherLocation, .current)
+        var settings = CanvasSettings()
+        settings.promptTemplate = "Keep my custom idea"
+        settings.weatherLocation = .fixed(WeatherPlace(name: "Invalid", latitude: 91, longitude: 0))
+        let restored = try JSONDecoder().decode(CanvasSettings.self, from: JSONEncoder().encode(settings))
+        XCTAssertEqual(restored.weatherLocation, .current)
+        XCTAssertEqual(restored.promptTemplate, "Keep my custom idea")
+    }
+
+    func testFixedLocationSeparatesCacheKeysAndCurrentLocationKeepsLegacyKey() {
+        var settings = CanvasSettings()
+        settings.sourceDigest = "fixture-picture"
+        let legacyKey = "fa2153885fdb6ba71993daf2388e42be63ad9c3b5a049685da037eb57c639e44"
+        XCTAssertEqual(HourWallpaperCache.recipeID(for: settings), legacyKey)
+        settings.weatherLocation = .fixed(WeatherPlace(name: "First place", latitude: 40, longitude: -70))
+        let first = HourWallpaperCache.recipeID(for: settings)
+        XCTAssertNotEqual(first, legacyKey)
+        settings.weatherLocation = .fixed(WeatherPlace(name: "Second place", latitude: 45, longitude: -75))
+        XCTAssertNotEqual(HourWallpaperCache.recipeID(for: settings), first)
+        settings.weatherLocation = .current
+        XCTAssertEqual(HourWallpaperCache.recipeID(for: settings), legacyKey)
+    }
+
+    func testPhotoGPSHandlesHemispheresAndRejectsMissingOrInvalidCoordinates() throws {
+        let gps: [CFString: Any] = [kCGImagePropertyGPSLatitude: 40.0, kCGImagePropertyGPSLongitude: 70.0,
+                                  kCGImagePropertyGPSLatitudeRef: "S", kCGImagePropertyGPSLongitudeRef: "W"]
+        let place = try XCTUnwrap(ImageStore.pictureLocation(gps: gps))
+        XCTAssertEqual(place.latitude, -40)
+        XCTAssertEqual(place.longitude, -70)
+        XCTAssertNil(ImageStore.pictureLocation(gps: [:]))
+        var invalid = gps
+        invalid[kCGImagePropertyGPSLatitude] = 91
+        XCTAssertNil(ImageStore.pictureLocation(gps: invalid))
+        invalid = gps
+        invalid.removeValue(forKey: kCGImagePropertyGPSLongitudeRef)
+        XCTAssertNil(ImageStore.pictureLocation(gps: invalid))
+    }
+
+    func testPhotoLocationReadsActualOriginalMetadata() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("jpg")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let context = try XCTUnwrap(CGContext(data: nil, width: 2, height: 2, bitsPerComponent: 8, bytesPerRow: 8,
+                                             space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        let image = try XCTUnwrap(context.makeImage())
+        let destination = try XCTUnwrap(CGImageDestinationCreateWithURL(url as CFURL, UTType.jpeg.identifier as CFString, 1, nil))
+        let gps: [CFString: Any] = [kCGImagePropertyGPSLatitude: 40.0, kCGImagePropertyGPSLongitude: 70.0,
+                                  kCGImagePropertyGPSLatitudeRef: "N", kCGImagePropertyGPSLongitudeRef: "E"]
+        CGImageDestinationAddImage(destination, image, [kCGImagePropertyGPSDictionary: gps] as CFDictionary)
+        XCTAssertTrue(CGImageDestinationFinalize(destination))
+        XCTAssertEqual(ImageStore.pictureLocation(at: url)?.latitude, 40)
+        XCTAssertEqual(ImageStore.pictureLocation(at: url)?.longitude, 70)
     }
 
     private func utcCalendar() -> Calendar {

@@ -156,7 +156,8 @@ final class ImageGenerationDriverTests: XCTestCase {
     func testCostsAndDataDisclosureFollowTheSelectedProvider() {
         let copy = ImageGenerationCopy(provider: .compatible)
         XCTAssertFalse(copy.ideaHelp.contains("OpenAI"))
-        XCTAssertTrue(copy.ideaHelp.contains("Other image API"))
+        XCTAssertTrue(copy.ideaHelp.contains("Dark Mode"))
+        XCTAssertFalse(copy.ideaHelp.lowercased().contains("credit"))
         XCTAssertFalse(copy.previewTimeHelp.contains("OpenAI"))
         XCTAssertFalse(copy.cropDoneNotice(hasChanges: true).contains("OpenAI"))
         XCTAssertEqual(copy.cropDoneNotice(hasChanges: false), AppCopy.cropDoneNotice(hasChanges: false))

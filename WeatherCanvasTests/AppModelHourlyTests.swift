@@ -4,6 +4,58 @@ import XCTest
 final class AppModelHourlyTests: XCTestCase {
 
     @MainActor
+    func testAppearanceIsCapturedAndAnOldModeResultCannotReplaceTheDesktop() async throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        fake.creationGate = AppHourlyGate()
+        let model = fake.model()
+        defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+        model.setSystemAppearance(.light)
+        XCTAssertTrue(fake.created.isEmpty)
+        await model.refreshIfNeeded(userInitiated: true)
+        await appEventually { fake.created.count == 1 }
+        XCTAssertEqual(fake.created.first?.settings.systemAppearance, .light)
+        let paidCount = fake.ledger.count(on: fake.clock)
+        model.setSystemAppearance(.dark)
+        XCTAssertEqual(model.settings.systemAppearance, .dark)
+        XCTAssertEqual(fake.ledger.count(on: fake.clock), paidCount)
+        fake.creationGate?.release()
+        await appEventually { !model.isGenerating }
+        XCTAssertTrue(fake.applied.isEmpty)
+        await model.refreshIfNeeded(userInitiated: true)
+        await appEventually { fake.applied.count == 1 && !model.isGenerating }
+        XCTAssertEqual(fake.created.last?.settings.systemAppearance, .dark)
+    }
+
+    @MainActor
+    func testSelectingWeatherLocationRefreshesOnlyWeatherAndPaidOldLocationCannotApply() async throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        fake.creationGate = AppHourlyGate()
+        let model = fake.model()
+        defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+        await model.refreshIfNeeded(userInitiated: true)
+        await appEventually { fake.created.count == 1 }
+        let paidCount = fake.ledger.count(on: fake.clock)
+        let place = WeatherPlace(name: "Example town", latitude: 40, longitude: -70)
+        model.setWeatherLocation(.fixed(place))
+        await appEventually { model.workspaceWeather != nil }
+        XCTAssertEqual(model.weatherLocationStatus, "Example town")
+        XCTAssertEqual(model.settings.weatherLocation, .fixed(place))
+        XCTAssertEqual(fake.ledger.count(on: fake.clock), paidCount)
+        XCTAssertEqual(fake.created.count, 1)
+        fake.creationGate?.release()
+        await appEventually { !model.isGenerating }
+        XCTAssertTrue(fake.applied.isEmpty)
+        model.setWeatherLocation(.current)
+        await appEventually { model.workspaceWeather != nil }
+        XCTAssertEqual(model.settings.weatherLocation, .current)
+        XCTAssertEqual(fake.created.count, 1)
+        XCTAssertEqual(fake.ledger.count(on: fake.clock), paidCount)
+        XCTAssertTrue(fake.applied.isEmpty)
+    }
+
+    @MainActor
     func testSkippingWelcomeNeedsNoKeyOrPictureAndCreatesNothing() {
         let model = AppModel()
         defer { model.stopBackgroundTasks() }
