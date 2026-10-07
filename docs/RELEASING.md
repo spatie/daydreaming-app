@@ -117,3 +117,13 @@ Sources: [Sparkle sandbox integration](https://sparkle-project.org/documentation
 Version 0.0.1, build 11 was published on October 7, 2026 from source `66a008e4f912c39a49e1de0c00cb850ce87db954`. Both the app and DMG were notarized and stapled. The published DMG SHA256 is `6da52951737c6cba49fccc492df4ac6e00607bce238ae643168d03021d19251f`; the ZIP SHA256 is `0f9cc0fc19d9491d1911c824881602aa02f65449a43f01f86783c7354ff4acb7`. The signed feed SHA256 is `10f453bf2562bb416211f6c4d66c78b0b1d671acf9a466fb7a78723ca3a863b5`.
 
 Storage and website publication credentials are configured in Actions. Apple signing/notarization and the dedicated Sparkle private seed must also be configured before dispatching the full CI workflow. The first release was prepared locally with the validated Keychain profile above. Never commit or upload a Keychain database or a 1Password export.
+
+## Published release 0.0.2
+
+Version 0.0.2, build 16 was published on October 7, 2026 from source `b27ad554a46b51f63a8c0d848187afed5367bb66`. Verification passed 389 app tests and 20 release tests. Both the universal app and DMG were notarized and stapled. The manifest SHA256 is `f040167564115d3e855c7956a5f98402042707a26b27172b1711c07f689316ad`.
+
+- DMG SHA256: `3c121fce215a497e924b639ebf7ae1806baf6e46b9a23406b33d19d677496747`
+- ZIP SHA256: `4acebdd91957d2fa34ddf5ef446cceb1280e2463460fa027b8f219d77cfeb33c`
+- Signed feed SHA256: `9aaed9c387e488e00722da2f3ef8681ac66785e78fb1afd9077cdc7b773b4730`
+
+The release used the existing local notarization profile and dedicated Sparkle Keychain account. Website publication ran the same checked-in publisher with a temporary bucket writer, revoked after publication. Public downloads matched the manifest and `/download` selected the new DMG. For a local release, publish the immutable prepared directory first, create the GitHub release against its recorded source revision, then copy the published signed feed verbatim into this repository. Keep the release tag on the built source, rather than the later feed bookkeeping commit.

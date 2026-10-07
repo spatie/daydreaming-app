@@ -9,6 +9,26 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <description>Daydreaming updates.</description>
         <language>en</language>
         <item>
+            <title>0.0.2</title>
+            <pubDate>Wed, 07 Oct 2026 11:32:06 +0200</pubDate>
+            <sparkle:version>16</sparkle:version>
+            <sparkle:shortVersionString>0.0.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[# Daydreaming 0.0.2
+
+Your wallpaper can follow macOS Light and Dark Mode.
+
+- Switches your running wallpaper when macOS changes appearance. Matching saved wallpapers appear immediately; otherwise Daydreaming makes one within your daily image limit. Paused wallpapers stay unchanged.
+- Adds the current macOS appearance to the AI context. Try an idea such as “Keep the scene natural in Light Mode, and use softer, darker colors in Dark Mode.”
+- Choose the weather location on the main screen: your current location, a fixed town or city, or the GPS location saved in your original picture.
+- Refreshes stale location readings and selects the current forecast hour more accurately, including clearer handling of partly cloudy weather.
+- Gives the preview a softer shadow and simplifies the idea field and its explanation.
+
+Requires macOS 26 or later. New images use your connected image provider and your daily image limit.
+]]></description>
+            <enclosure url="https://getdaydreaming.com/releases/Daydreaming-0.0.2-16.dmg" length="7569189" type="application/octet-stream" sparkle:edSignature="9/sLEDAiLWDXQBN8gy4ykBHPotBDSKql3342SQ+QqeozYevSCklUaDicbK21OT6lgdmUVt7NMUrlllHCQrAzDw=="/>
+        </item>
+        <item>
             <title>0.0.1</title>
             <pubDate>Wed, 07 Oct 2026 08:07:30 +0200</pubDate>
             <sparkle:version>11</sparkle:version>
@@ -32,6 +52,6 @@ Daydreaming is free and postcardware. Image creation uses your own OpenAI API ac
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: ZavHxMb9ElIWI7uKm9Hloi0tXNeaOS9DVe5/Mxg+eq1gRXY66CSbNjj3oznI4L2S/nwxBf7BMBepV3Mhe8kUAg==
-length: 1840
+edSignature: SPwdhFGCi0VyEO8hhH0UTVWaYjcIWMyRGK6JJPdYy0dOPECbw7OhbpjVbF/HWg2GPmZdxnVgPlJIfaqIk9HdDg==
+length: 3426
 -->
