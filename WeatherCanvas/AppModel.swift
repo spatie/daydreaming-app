@@ -2744,7 +2744,7 @@ final class AppModel: ObservableObject {
         case let network as URLError where [.notConnectedToInternet, .networkConnectionLost, .timedOut,
                                             .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed,
                                             .dataNotAllowed].contains(network.code):
-            status = "Update delayed · connection unavailable"
+            status = "Update delayed · Connection unavailable"
             recovery = .retry
             detail = settings.automaticUpdates
                 ? "Your wallpaper stays in place. Daydreaming will retry automatically."

@@ -103,11 +103,40 @@ final class AppModelHourlyTests: XCTestCase {
         await appEventually { fake.created.count == 2 && !model.isGenerating }
         XCTAssertEqual(model.displayedImageURL, desktop)
         XCTAssertEqual(fake.applied.count, 1)
-        XCTAssertEqual(model.menuUpdateStatus, "Update delayed · connection unavailable")
+        XCTAssertEqual(model.menuUpdateStatus, "Update delayed · Connection unavailable")
         XCTAssertEqual(model.recovery, .retry)
         XCTAssertTrue(model.detail.contains("retry automatically"))
         XCTAssertNil(model.presentation)
         XCTAssertEqual(model.lastImageGeneratedAt, generatedAt)
+    }
+
+    @MainActor
+    func testSchedulerRetriesOfflineUpdateAtDeadlineAndRecoversWithoutInteraction() async throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        fake.runsBackgroundTasks = true
+        fake.creationError = URLError(.notConnectedToInternet)
+        let model = fake.model()
+        defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+        await appEventually { fake.created.count == 1 && model.activity == .failed && fake.sleeper.waitingCount > 0 }
+        let retryAt = try XCTUnwrap(model.nextCheck(after: fake.clock))
+        XCTAssertEqual(retryAt.timeIntervalSince(fake.clock), 60)
+
+        let ticks = fake.sleeper.sleepCalls
+        fake.clock = retryAt.addingTimeInterval(-1)
+        fake.sleeper.wakeAll()
+        await appEventually { fake.sleeper.sleepCalls > ticks && fake.sleeper.waitingCount > 0 }
+        XCTAssertEqual(fake.created.count, 1)
+        XCTAssertTrue(fake.applied.isEmpty)
+
+        fake.creationError = nil
+        fake.clock = retryAt
+        fake.sleeper.wakeAll()
+        await appEventually { fake.applied.count == 1 && !model.isGenerating }
+        XCTAssertEqual(fake.created.count, 2)
+        XCTAssertEqual(fake.ledger.count(on: fake.clock), 2)
+        XCTAssertTrue(model.menuUpdateStatus?.hasPrefix("Wallpaper updated at ") == true)
+        XCTAssertGreaterThan(try XCTUnwrap(model.nextCheck(after: fake.clock)), fake.clock)
     }
 
     @MainActor
