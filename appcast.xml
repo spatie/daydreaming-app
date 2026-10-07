@@ -9,6 +9,25 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <description>Daydreaming updates.</description>
         <language>en</language>
         <item>
+            <title>0.0.4</title>
+            <pubDate>Wed, 07 Oct 2026 14:24:43 +0200</pubDate>
+            <sparkle:version>18</sparkle:version>
+            <sparkle:shortVersionString>0.0.4</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[# Daydreaming 0.0.4
+
+A friendlier way to ask for the next feature.
+
+- Adds “Ask for a feature…” to the menu bar menu and uses the same name in Help and About.
+- Gives the request window a colorful header, a more compact layout, and clear explanations beneath the relevant fields.
+- Extends the About window's gradient into the title bar.
+- Keeps the menu bar's quiet status and weather information at the bottom.
+
+Requires macOS 26 or later.
+]]></description>
+            <enclosure url="https://getdaydreaming.com/releases/Daydreaming-0.0.4-18.dmg" length="7594044" type="application/octet-stream" sparkle:edSignature="NiUt7wa4r0ghksCKewIu9FivQ151j0h6c9YhTvcns1TSxRY8TNBPe/Gkb5UfQSz8fNItRzUqju+Qh+rSNBDGBQ=="/>
+        </item>
+        <item>
             <title>0.0.3</title>
             <pubDate>Wed, 07 Oct 2026 12:07:09 +0200</pubDate>
             <sparkle:version>17</sparkle:version>
@@ -71,6 +90,6 @@ Daydreaming is free and postcardware. Image creation uses your own OpenAI API ac
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: RmKITfa/xwwxYaFUkb8NYdp/UKvAXER6lCRypMuHTlIXIrWRFmvbcp0s7dGb/fbqYjT7hd2gwCcvSrePdNGxCw==
-length: 4718
+edSignature: Cp+VNFowTHgkOtJrtMcI087JgJII2k1NAK3BtqmrCCVphSfaUAegXklclktfFtKHcNDEUkaVZxPoLKvI7hzHBA==
+length: 5826
 -->

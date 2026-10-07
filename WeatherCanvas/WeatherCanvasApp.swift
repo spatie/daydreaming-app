@@ -204,7 +204,7 @@ private struct MenuBarContent: View {
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        Button("Open Daydreaming") { showMainWindow() }
+        Button("Open Daydreaming…") { showMainWindow() }
         if model.onboardingComplete {
             Button("Settings…") {
                 NSApp.activate()
