@@ -4,6 +4,112 @@ import XCTest
 final class AppModelHourlyTests: XCTestCase {
 
     @MainActor
+    func testModeChangeAppliesFullCacheImmediatelyWithoutPaymentEvenAtTheLimit() async throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        fake.settings.systemAppearance = .light
+        fake.settings.reuseMatchingImages = false
+        fake.previewWindowActive = false
+        for _ in 0..<fake.settings.dailyGenerationLimit { let attempt = fake.ledger.reserve(at: fake.clock); fake.ledger.complete(attempt) }
+        var dark = fake.settings
+        dark.systemAppearance = .dark
+        let saved = fake.directory.appendingPathComponent("dark-cache.png")
+        try Data("saved full wallpaper".utf8).write(to: saved)
+        var cache = HourWallpaperCache(directory: fake.directory)
+        try cache.record(pictureID: HourWallpaperCache.pictureID(for: dark), recipeID: HourWallpaperCache.recipeID(for: dark),
+                         hour: 14, weather: WeatherSnapshot(label: "clear", symbol: "sun.max", fetchedAt: fake.clock),
+                         url: saved, settingsSnapshot: dark)
+        let model = fake.model(nextCheck: fake.clock.addingTimeInterval(21_600))
+        defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+        let count = fake.ledger.count(on: fake.clock)
+        model.setSystemAppearance(.dark)
+        model.setSystemAppearance(.dark)
+        await appEventually { fake.applied == [saved] }
+        XCTAssertEqual(fake.ledger.count(on: fake.clock), count)
+        XCTAssertTrue(fake.created.isEmpty)
+        XCTAssertEqual(model.displayedImageURL, saved)
+        XCTAssertFalse(model.settings.reuseMatchingImages)
+    }
+
+    @MainActor
+    func testModeCacheMissCreatesOneWallpaperBeforeTheScheduledUpdate() async throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        fake.settings.systemAppearance = .light
+        fake.previewWindowActive = false
+        let model = fake.model(nextCheck: fake.clock.addingTimeInterval(21_600))
+        defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+        model.setSystemAppearance(.dark)
+        model.setSystemAppearance(.dark)
+        await appEventually { fake.applied.count == 1 && !model.isGenerating }
+        XCTAssertEqual(fake.created.count, 1)
+        XCTAssertEqual(fake.created.first?.settings.systemAppearance, .dark)
+        XCTAssertEqual(fake.created.first?.renderProfile, .wallpaper)
+        XCTAssertEqual(fake.ledger.count(on: fake.clock), 1)
+        await model.refreshIfNeeded()
+        XCTAssertEqual(fake.created.count, 1)
+        XCTAssertEqual(fake.applied.count, 1)
+    }
+
+    @MainActor
+    func testPausedModeChangeAndFirstAppearanceCaptureDoNotCreateOrApply() async throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        let model = fake.model(nextCheck: fake.clock.addingTimeInterval(21_600))
+        defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+        model.setSystemAppearance(.light)
+        await Task.yield()
+        XCTAssertTrue(fake.created.isEmpty)
+        model.settings.automaticUpdates = false
+        model.setSystemAppearance(.dark)
+        for _ in 0..<10 { await Task.yield() }
+        XCTAssertTrue(fake.created.isEmpty)
+        XCTAssertTrue(fake.applied.isEmpty)
+        XCTAssertEqual(fake.ledger.count(on: fake.clock), 0)
+    }
+
+    @MainActor
+    func testReturningToCachedModeDoesNotWaitForAnOldPaidImageOrApplyItLater() async throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        fake.settings.systemAppearance = .light
+        let saved = fake.directory.appendingPathComponent("light-cache.png")
+        try Data("saved light wallpaper".utf8).write(to: saved)
+        var cache = HourWallpaperCache(directory: fake.directory)
+        try cache.record(pictureID: HourWallpaperCache.pictureID(for: fake.settings), recipeID: HourWallpaperCache.recipeID(for: fake.settings),
+                         hour: 14, weather: WeatherSnapshot(label: "clear", symbol: "sun.max", fetchedAt: fake.clock),
+                         url: saved, settingsSnapshot: fake.settings)
+        fake.creationGate = AppHourlyGate()
+        let model = fake.model(nextCheck: fake.clock.addingTimeInterval(21_600))
+        defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+        model.setSystemAppearance(.dark)
+        await appEventually { fake.created.count == 1 }
+        model.setSystemAppearance(.light)
+        await appEventually { fake.applied == [saved] }
+        XCTAssertTrue(model.isGenerating)
+        XCTAssertEqual(fake.ledger.count(on: fake.clock), 1)
+        fake.creationGate?.release()
+        await appEventually { !model.isGenerating }
+        XCTAssertEqual(fake.applied, [saved])
+        XCTAssertEqual(HourWallpaperCache(directory: fake.directory).entries.count, 2)
+    }
+
+    @MainActor
+    func testModeCacheMissRespectsTheDailyLimit() async throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        fake.settings.systemAppearance = .light
+        for _ in 0..<fake.settings.dailyGenerationLimit { let attempt = fake.ledger.reserve(at: fake.clock); fake.ledger.complete(attempt) }
+        let model = fake.model(nextCheck: fake.clock.addingTimeInterval(21_600))
+        defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+        model.setSystemAppearance(.dark)
+        await appEventually { model.queuedCount == 1 }
+        XCTAssertTrue(fake.created.isEmpty)
+        XCTAssertTrue(fake.applied.isEmpty)
+        XCTAssertEqual(fake.ledger.count(on: fake.clock), fake.settings.dailyGenerationLimit)
+    }
+
+    @MainActor
     func testAppearanceIsCapturedAndAnOldModeResultCannotReplaceTheDesktop() async throws {
         let fake = try AppHourlyFake()
         defer { fake.removeFiles() }

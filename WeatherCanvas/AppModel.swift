@@ -161,6 +161,8 @@ final class AppModel: ObservableObject {
     private var queueResumeTask: Task<Void, Never>?
     private var hasFinishedLoading = false
     private var appearanceObservation: NSKeyValueObservation?
+    private var appearanceUpdatePending = false
+    private var appearanceRefreshTask: Task<Void, Never>?
     private var hourCache: HourWallpaperCache?
     private var preparingHours = Set<String>()
     private struct PreparationRequest {
@@ -234,6 +236,7 @@ final class AppModel: ObservableObject {
         previewGenerationTask?.cancel()
         promptUpdateTask?.cancel()
         stagedExpiryTask?.cancel()
+        appearanceRefreshTask?.cancel()
     }
 
     init() {
@@ -983,9 +986,18 @@ final class AppModel: ObservableObject {
 
     func setSystemAppearance(_ appearance: WallpaperAppearance) {
         guard settings.systemAppearance != appearance else { return }
+        let wasKnown = settings.systemAppearance != nil
         draftPreviewSettings?.systemAppearance = appearance
         previousWallpaperRecipe?.systemAppearance = appearance
         settings.systemAppearance = appearance
+        appearanceRefreshTask?.cancel()
+        // First capture adds context; only an actual mode change requests an update.
+        appearanceUpdatePending = wasKnown && settings.automaticUpdates && !hasUnadoptedPicture
+        guard appearanceUpdatePending else { return }
+        nextRetryAt = .distantPast
+        if hasFinishedLoading {
+            appearanceRefreshTask = Task { [weak self] in await self?.refreshIfNeeded() }
+        }
     }
 
     func refreshWeatherLocation() {
@@ -2164,6 +2176,8 @@ final class AppModel: ObservableObject {
     }
 
     func stopBackgroundTasks() {
+        appearanceRefreshTask?.cancel()
+        appearanceRefreshTask = nil
         stagedExpiryTask?.cancel(); stagedExpiryTask = nil
         cancelPromptUpdate()
         cancelPlannedPreviewGeneration()
@@ -2211,13 +2225,17 @@ final class AppModel: ObservableObject {
         let automaticNeedsRetry = settings.automaticUpdates && consecutiveFailures > 0 && recovery == .retry
         let automaticIsDue = (WallpaperSchedule.shouldCheck(at: now, nextCheck: scheduledNextCheck,
                                                           automatic: settings.automaticUpdates, userInitiated: false)
-            || automaticNeedsRetry)
+            || automaticNeedsRetry || appearanceUpdatePending)
             && now >= nextRetryAt
             && !generationQueue.hasDesktopRequest(hour: hour, date: now, recipeID: recipe)
         if automaticIsDue {
             await generationQueue.prepareBeforeResuming {
+                let recentWeather = (cachedForecast(at: now) ?? workspaceWeather ?? latestWeather).flatMap {
+                    now.timeIntervalSince($0.fetchedAt) < 900 ? $0 : nil
+                }
                 await prepareHourlyJob(hour: hour, priority: .automatic, appliesToDesktop: true,
-                                       forceFresh: force, additionalIntent: manual ? .manualWallpaper : [])
+                                       forceFresh: force, additionalIntent: manual ? .manualWallpaper : [],
+                                       weatherOverride: appearanceUpdatePending ? recentWeather : nil)
             }
         } else {
             if manual {
@@ -2246,6 +2264,7 @@ final class AppModel: ObservableObject {
         synchronizeSystemAppearance()
         var snapshot = settingsSnapshot ?? (renderProfile == .quickPreview ? previewSettings : settings)
         if !isDesignPreview { snapshot.systemAppearance = settings.systemAppearance }
+        if appearanceUpdatePending && appliesToDesktop { snapshot.reuseMatchingImages = true }
         guard !isPreparingForAppUpdate, allowsHourlyPipeline, stagedPictureURL == nil, let sourcePath = snapshot.sourcePath,
               sourceAvailable(sourcePath), hasImageConnection else { return }
         if renderProfile == .quickPreview {
@@ -2309,11 +2328,17 @@ final class AppModel: ObservableObject {
             if !request.intent.intersection([.automaticWallpaper, .manualWallpaper]).isEmpty {
                 desktopIntentRevisions[id] = request.desktopRevision
             }
-            generationQueue.enqueue(HourlyGenerationJob(id: id, hour: hour, date: date, recipeID: recipe, weather: weather,
+            let job = HourlyGenerationJob(id: id, hour: hour, date: date, recipeID: recipe, weather: weather,
                                                         settings: snapshot, sourcePath: sourcePath, priority: preparedPriority,
                                                         requiresCredit: request.forceFresh || cached == nil, forceFresh: request.forceFresh,
                                                         userInitiated: userInitiated, intent: request.intent, renderProfile: renderProfile,
-                                                        usesSavedRecipe: request.usesSavedRecipe))
+                                                        usesSavedRecipe: request.usesSavedRecipe)
+            if appearanceUpdatePending, renderProfile == .wallpaper, !request.forceFresh, let cached,
+               !request.intent.intersection([.automaticWallpaper, .manualWallpaper]).isEmpty,
+               request.desktopRevision == desktopSelectionRevision {
+                // Cached mode switches must not wait behind an older paid image request.
+                retrySavedApplication(SavedWallpaperApplication(job: job, url: cached.url))
+            } else { generationQueue.enqueue(job) }
             if request.intent.contains(.manualWallpaper) { pendingManualGeneration = false }
             refreshSelectedPreview()
         } catch is CancellationError {
@@ -2352,7 +2377,8 @@ final class AppModel: ObservableObject {
         }
         queue.onError = { [weak self] job, error in
             guard let self else { return }
-            guard job.settings.imageProvider == settings.imageProvider else {
+            guard job.settings.imageProvider == settings.imageProvider,
+                  job.recipeID == HourWallpaperCache.recipeID(for: liveSettings(for: job), date: pipelineNow) else {
                 if recovery == nil { activity = .idle }
                 refreshSelectedPreview()
                 return
@@ -2540,6 +2566,7 @@ final class AppModel: ObservableObject {
     private func applySavedWallpaper(_ saved: SavedWallpaperApplication) throws {
         activity = .applying
         try applyPictureToDesktop(saved.url)
+        if saved.job.settings.systemAppearance == settings.systemAppearance { appearanceUpdatePending = false }
         latestWeather = saved.job.weather
         cachedWallpaperUseMessage = nil
         lastAppliedKey = saved.job.id
