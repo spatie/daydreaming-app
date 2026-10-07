@@ -58,8 +58,9 @@ final class PromptSubmissionTests: XCTestCase {
         XCTAssertEqual(draft.name, "@Freek")
         let requests = await recorder.requests
         XCTAssertEqual(requests.count, 2)
-        XCTAssertEqual(requests[0].httpBody, requests[1].httpBody)
         let payload = try JSONDecoder().decode(PromptSubmission.self, from: XCTUnwrap(requests[0].httpBody))
+        let retry = try JSONDecoder().decode(PromptSubmission.self, from: XCTUnwrap(requests[1].httpBody))
+        XCTAssertEqual(payload, retry)
         XCTAssertEqual(payload.prompt, "Feature request")
         XCTAssertEqual(payload.name, "Freek")
     }
