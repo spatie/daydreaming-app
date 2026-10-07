@@ -2971,8 +2971,9 @@ final class AppModel: ObservableObject {
             lastUpdated = .now
         } else if state == "never-created" {
             displayedImageURL = sourceImageURL
-        } else if state == "busy" {
+        } else if state == "busy" || state == "adopting" {
             isGenerating = true
+            isAdoptingWallpaper = state == "adopting"
             activity = .generating
             status = "Creating your wallpaper"
             detail = "This can take a minute. Your current wallpaper stays in place."

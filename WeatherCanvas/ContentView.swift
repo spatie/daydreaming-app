@@ -505,25 +505,43 @@ struct ContentView: View {
     }
 
     private var confirmationBar: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) { footerStatus }
+        Group {
             if isCropping {
-                HStack {
-                    Button("Reset") { cropDraft = PictureCrop(imageSize: cropImageSize, targetAspectRatio: displayAspectRatio) }.disabled(savingCrop)
-                    Spacer()
-                    Button("Cancel", role: .cancel) { model.presentation = nil }
-                        .keyboardShortcut(.cancelAction).disabled(savingCrop)
-                    Button(savingCrop ? "Saving…" : "Done") { finishCrop() }
-                        .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
-                        .disabled(cropDraft == nil || savingCrop)
-                        .help(model.imageCopy.cropDoneNotice(hasChanges: cropHasChanges))
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 8) { footerStatus }
+                    HStack {
+                        Button("Reset") { cropDraft = PictureCrop(imageSize: cropImageSize, targetAspectRatio: displayAspectRatio) }.disabled(savingCrop)
+                        Spacer()
+                        Button("Cancel", role: .cancel) { model.presentation = nil }
+                            .keyboardShortcut(.cancelAction).disabled(savingCrop)
+                        Button(savingCrop ? "Saving…" : "Done") { finishCrop() }
+                            .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
+                            .disabled(cropDraft == nil || savingCrop)
+                            .help(model.imageCopy.cropDoneNotice(hasChanges: cropHasChanges))
+                    }
                 }
             } else {
-                HStack { Spacer(); wallpaperDecision.fixedSize(horizontal: true, vertical: false) }
-                .disabled(model.stagedPictureURL != nil && model.stagedPictureError == nil)
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .center, spacing: 16) {
+                        HStack(spacing: 8) { footerStatus }
+                            .fixedSize(horizontal: true, vertical: false)
+                        Spacer(minLength: 8)
+                        wallpaperDecisionActions
+                    }
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 8) { footerStatus }
+                        HStack { Spacer(); wallpaperDecisionActions }
+                    }
+                }
             }
         }
         .controlSize(.regular)
+    }
+
+    private var wallpaperDecisionActions: some View {
+        wallpaperDecision
+            .fixedSize(horizontal: true, vertical: false)
+            .disabled(model.stagedPictureURL != nil && model.stagedPictureError == nil)
     }
 
     @ViewBuilder private var wallpaperDecision: some View {
