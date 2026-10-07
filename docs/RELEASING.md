@@ -1,11 +1,33 @@
 # Preparing a Daydreaming release
 
+## Next release in a few commands
+
+1. Finish review and the isolated Swift tests. Commit and push the intended sources to `main`.
+2. Add `docs/releases/VERSION.md` with the real changes. Commit the new marketing version and a higher build number in `project.yml` and the generated project.
+3. Run `gh workflow run release.yml --repo spatie/daydreaming-app --ref main -f version=VERSION`.
+4. Follow the run with `gh run watch --repo spatie/daydreaming-app RUN_ID --exit-status`.
+5. Verify `/download`, `/changelog`, and `/appcast.xml` on `https://getdaydreaming.com`. The download must match the release manifest's SHA256. Check a mounted DMG's stapled ticket before announcing the release.
+
+The workflow creates notes, tags and release artifacts. Do not create the tag first. It publishes the signed feed last, after notarization and immutable download verification. An incomplete run must leave the existing feed intact.
+
+### One-time credential setup
+
+Store Apple signing and notarization credentials in 1Password and GitHub Actions secrets, never in Git, release notes or chat. The existing Spatie Team API key used for notarizing Bloom can also notarize Daydreaming. Its key ID and issuer ID must come from the same 1Password item as its `.p8` attachment. Do not substitute an unidentified `.p8` download. Developer ID signing uses team `97KRXCRMAY`.
+
+For local releases, authenticate the CLI with `op signin` before looking up the approved item. An unlocked 1Password window alone does not authenticate the CLI. Complete the actual “Allow Bloom to get CLI access” Touch ID request. Download the attachment to an owner-only temporary directory, validate it with Apple, and save a named local `notarytool` Keychain profile. Delete the temporary key afterward. The first release uses the validated profile `daydreaming-release-20261007`; profile names are not credentials.
+
+Daydreaming's Sparkle key is separate from Bloom's. Keep its private half in Keychain or the `DAYDREAMING_SPARKLE_PRIVATE_KEY` Actions secret. Only the public half belongs in the repository. A local release can sign through Keychain without exporting that private key.
+
+Download storage is the dedicated Laravel Cloud R2 release bucket, with a `releases` prefix, an EU endpoint and S3 region `auto`. Its tested conditional `PutObject` returns 412 when a filename already exists. Bucket credentials stay in Actions secrets. The website and workflow must use the identical `DAYDREAMING_OBJECT_BASE_URL`.
+
+Before making source public, scan the entire Git history with `gitleaks git . --redact=100 --no-banner`. Also check tracked files for keys, exports, `.env` files and personal captures. Ignore rules protect new files; they do not remove secrets from history. If a real credential is found, rotate it and clean the history before publication. A clean scan is a check, not a substitute for reviewing what will become public.
+
 ## GitHub workflow
 
 Run **Release Daydreaming** from the Actions tab on `main`, or use:
 
 ```sh
-gh workflow run release.yml --repo spatie/daydreaming-app --ref main -f version=0.1.0
+gh workflow run release.yml --repo spatie/daydreaming-app --ref main -f version=0.0.1
 ```
 
 The workflow tests the app under an isolated preview identifier on macOS 26, validates the workflow, then preflights every release credential before building the production archive. Actions are pinned by commit. It uses the selected immutable workflow commit, stamps the requested version and Git commit count as the build number, and refuses existing version tags or non-increasing feed builds. Release concurrency is serialized. It creates the private GitHub release and `vVERSION` tag after successful website publication. The native repository remains private.
@@ -36,7 +58,7 @@ Public URLs remain `https://getdaydreaming.com/releases/Daydreaming-VERSION-BUIL
 
 For interrupted publication, download the verified workflow artifact and resume `scripts/release/publish.py` with that unchanged directory and configured credentials. Never rebuild and overwrite the same published filename. If the feed was already promoted, verify live hashes first and finish the private GitHub release using the manifest's source revision and the generated notes. A published version gets a new version and build for any correction.
 
-The first public release remains blocked until these credentials and external object storage are actually configured. A signed local design-preview DMG is not a notarized public release.
+Publication is blocked whenever these credentials or download storage are missing. A signed local design-preview DMG is not a notarized public release.
 
 Sparkle is pinned to [2.10.0](https://github.com/sparkle-project/Sparkle/releases/tag/2.10.0). The feed is `https://getdaydreaming.com/appcast.xml`. Production Release builds use the feed when their committed public key is valid. Debug, preview identifiers, hosted tests and local channels never start an updater. Automatic checks run once a day by default, without a first-run permission question, like Bloom. Sparkle owns the saved Settings preference, so opting out remains respected. Automatic checks remain separate from wallpaper refreshes.
 
@@ -50,11 +72,11 @@ Use an existing explicitly named `notarytool` Keychain profile. The release tool
 
 ```sh
 python3 scripts/release/prepare.py \
-  --version 0.1.0 --build 5 \
+  --version 0.0.1 --build 11 \
   --identity 'Developer ID Application: Spatie (97KRXCRMAY)' \
-  --notary-profile daydreaming-notary \
-  --notes docs/releases/0.1.0.md \
-  --output /tmp/daydreaming-release-0.1.0-5
+  --notary-profile daydreaming-release-20261007 \
+  --notes docs/releases/0.0.1.md \
+  --output /tmp/daydreaming-release-0.0.1-11
 ```
 
 This command builds and submits the archives to Apple's notarization service. It does not publish, upload website files, create tags, push, commit, install or launch the app. It refuses dirty trees and existing output directories, and builds an isolated archive of the exact Git commit. XcodeGen and Xcode command line tools must already be installed. Dependency resolution uses the committed package lockfile.

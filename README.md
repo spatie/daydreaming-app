@@ -80,7 +80,7 @@ Sparkle checks the signed feed at `https://getdaydreaming.com/appcast.xml`. Chec
 
 See [RELEASING.md](docs/RELEASING.md) for the Developer ID signing, notarization, DMG/ZIP packaging and signed appcast command. It prepares verified artifacts without publishing them. The initial feed contains no releases.
 
-See [design.md](docs/design.md) for interaction rules, review workflow, and the pending installed-app checklist. Source review and fixtures do not establish native appearance or successful live generation. No publication or open-source license change is authorized.
+See [design.md](docs/design.md) for interaction rules, review workflow, and the installed-app checklist. Source review and fixtures do not establish native appearance or successful live generation. Signing credentials stay in Keychain, 1Password and GitHub Actions secrets. Only public signing keys belong in this repository.
 
 The main workspace uses small numbered accents in the app icon's orange, coral, magenta, and blue palette. Translucent landscape panes drift gently behind the controls, with a bounded damped response to moving the window. Motion pauses when the window is hidden, minimized, or inactive, under Reduce Motion or Low Power Mode. Reduce Transparency and Increase Contrast use a solid background. The foreground picture is never tinted by these effects. Previous Pictures uses an icon-only toolbar button with a text accessibility label and help.
 

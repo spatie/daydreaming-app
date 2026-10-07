@@ -35,9 +35,10 @@ jobs:
           python3 -c 'import os,re; assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+",os.environ["RELEASE_VERSION"])'
           xcodebuild -version
           test "$(xcrun --sdk macosx --show-sdk-version | cut -d. -f1)" -ge 26
-          brew install xcodegen actionlint openssl@3
+          brew install xcodegen actionlint openssl@3 gitleaks
           echo "DAYDREAMING_OPENSSL=$(brew --prefix openssl@3)/bin/openssl" >> "$GITHUB_ENV"
           actionlint
+          gitleaks git . --redact=100 --no-banner
       - name: Test release safety and isolated app
         run: |
           set -euo pipefail
