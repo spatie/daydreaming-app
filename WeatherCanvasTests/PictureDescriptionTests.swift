@@ -3,6 +3,17 @@ import XCTest
 @testable import Daydreaming
 
 final class PictureDescriptionTests: XCTestCase {
+    func testBuiltInPictureUsesTheRealLocalClassifier() async throws {
+        let picture = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("WeatherCanvas/Resources/YosemiteValley.jpg")
+        let store = PictureDescriptionStore(cacheURL: nil)
+        let description = await store.description(for: picture, digest: "real-classifier")
+        XCTAssertNotNil(description)
+        XCTAssertFalse(try XCTUnwrap(description).isEmpty)
+        let missing = await store.description(for: picture.appendingPathExtension("missing"), digest: "missing-file")
+        XCTAssertNil(missing)
+    }
+
     func testDescriptionsUseImageContentAndUncertainResultsStayNeutral() {
         XCTAssertEqual(PictureDescription.make(from: [
             .init(identifier: "cliff", confidence: 0.67),

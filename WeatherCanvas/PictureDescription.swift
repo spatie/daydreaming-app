@@ -1,4 +1,3 @@
-import CoreML
 import ImageIO
 import OSLog
 import SwiftUI
@@ -69,13 +68,13 @@ actor PictureDescriptionStore {
                 kCGImageSourceCreateThumbnailWithTransform: true,
                 kCGImageSourceThumbnailMaxPixelSize: 512
               ] as CFDictionary) else { return nil }
-        var request = ClassifyImageRequest()
-        for (stage, devices) in request.supportedComputeStageDevices {
-            guard let cpu = devices.first(where: { if case .cpu = $0 { return true }; return false }) else { return nil }
-            request.setComputeDevice(cpu, for: stage)
-        }
+        // The Objective-C request avoids Swift Vision symbols missing on macOS 26.
+        // Keep this small, optional analysis on the CPU on all supported systems.
+        let request = VNClassifyImageRequest()
+        request.usesCPUOnly = true
         do {
-            let observations = try await request.perform(on: image)
+            try VNImageRequestHandler(cgImage: image, options: [:]).perform([request])
+            guard let observations = request.results else { return nil }
             return PictureDescription.make(from: observations.map { .init(identifier: $0.identifier, confidence: $0.confidence) })
         } catch { return nil }
     }

@@ -68,6 +68,11 @@ def validate_app(app: Path, version: str, build: int, revision: str) -> str:
     architectures = run("lipo", "-archs", app / "Contents/MacOS/Daydreaming", capture=True).split()
     if set(architectures) != {"arm64", "x86_64"}:
         raise ValueError("Release app must contain both Apple silicon and Intel architectures")
+    # Xcode 27 marks this Swift Vision API as available on older macOS versions,
+    # but 26.6.2 lacks its getter and aborts at launch. Keep it out of both slices.
+    imports = run("nm", "-u", app / "Contents/MacOS/Daydreaming", capture=True)
+    if "$s6Vision20ClassifyImageRequestV28supportedComputeStageDevices" in imports:
+        raise ValueError("Release imports a Swift Vision symbol missing on macOS 26")
     result = subprocess.run(["codesign", "--display", "--entitlements", ":-", str(app)],
                             check=True, capture_output=True)
     entitlements = plistlib.loads(result.stdout)

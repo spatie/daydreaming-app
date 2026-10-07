@@ -207,15 +207,15 @@ struct OnboardingView: View {
 
                 default:
                     Text("Ready to follow the day.")
-                        .font(.largeTitle.weight(.semibold))
-                    Text("Your picture changes through the day, shaped by your local weather.")
+                        .font(.body.weight(.semibold))
+                    Text("Your wallpaper follows the time and local weather.")
                         .foregroundStyle(.secondary)
                     locationStatus
-                    Text("Starts at login and updates every screen while Daydreaming is open. You can change this in Settings. Your original stays saved.")
+                    Text("Starts at login. Your original stays saved.")
                         .foregroundStyle(.secondary)
                     if model.onboardingWeatherReady && !canContinue, let reason = model.generationUnavailableReason {
                         Label(reason, systemImage: "info.circle")
-                            .font(.callout).foregroundStyle(.secondary)
+                            .font(.body).foregroundStyle(.secondary)
                     }
                 }
                 if let error {
@@ -234,18 +234,18 @@ struct OnboardingView: View {
     private var locationStatus: some View {
         switch model.onboardingLocationState {
         case .notRequested:
-            Text("Local weather needs your approximate location. Daydreaming shares rounded coordinates with MET Norway. macOS will ask for permission next.")
-                .font(.caption).foregroundStyle(.secondary)
+            Text("Allow location access for local weather. Rounded coordinates go to MET Norway.")
+                .font(.body).foregroundStyle(.secondary)
         case .requesting:
             ProgressView("Waiting for location access…").controlSize(.small)
         case .allowed:
             Label("Local weather is ready", systemImage: "checkmark.circle")
-                .font(.callout)
+                .font(.body)
         case .denied:
             Label("Location access is off", systemImage: "location.slash")
-                .font(.callout)
-            Text("Allow Daydreaming in System Settings → Privacy & Security → Location Services, then return here.")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.body)
+            Text("Enable Daydreaming in System Settings → Privacy & Security → Location Services.")
+                .font(.body).foregroundStyle(.secondary)
         }
     }
 
