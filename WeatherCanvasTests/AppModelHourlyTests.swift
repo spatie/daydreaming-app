@@ -116,11 +116,14 @@ final class AppModelHourlyTests: XCTestCase {
         defer { fake.removeFiles() }
         fake.runsBackgroundTasks = true
         fake.creationError = URLError(.notConnectedToInternet)
-        let model = fake.model()
+        let scheduledAt = fake.clock.addingTimeInterval(3_600)
+        let model = fake.model(nextCheck: scheduledAt)
         defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+        await model.refreshIfNeeded(userInitiated: true)
         await appEventually { fake.created.count == 1 && model.activity == .failed && fake.sleeper.waitingCount > 0 }
         let retryAt = try XCTUnwrap(model.nextCheck(after: fake.clock))
         XCTAssertEqual(retryAt.timeIntervalSince(fake.clock), 60)
+        XCTAssertLessThan(retryAt, scheduledAt)
 
         let ticks = fake.sleeper.sleepCalls
         fake.clock = retryAt.addingTimeInterval(-1)

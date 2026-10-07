@@ -2093,8 +2093,10 @@ final class AppModel: ObservableObject {
             return
         }
         if applicationRetry != nil { clearApplicationRetry() }
-        let automaticIsDue = WallpaperSchedule.shouldCheck(at: now, nextCheck: scheduledNextCheck,
+        let automaticNeedsRetry = settings.automaticUpdates && consecutiveFailures > 0 && recovery == .retry
+        let automaticIsDue = (WallpaperSchedule.shouldCheck(at: now, nextCheck: scheduledNextCheck,
                                                           automatic: settings.automaticUpdates, userInitiated: false)
+            || automaticNeedsRetry)
             && now >= nextRetryAt
             && !generationQueue.hasDesktopRequest(hour: hour, date: now, recipeID: recipe)
         if automaticIsDue {
