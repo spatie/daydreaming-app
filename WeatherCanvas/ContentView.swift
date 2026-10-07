@@ -493,9 +493,6 @@ struct ContentView: View {
                     promptDraft = PromptRenderer.editableText(model.settings.promptTemplate)
                     return true
                 }
-            Text(model.imageCopy.ideaPreviewNotice)
-                .font(.caption).foregroundStyle(.primary)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
