@@ -149,3 +149,14 @@ Version 0.0.4, build 18 was published on October 7, 2026 from source `5e9dfa987f
 - Signed feed SHA256: `48c20c84f0d8fb92527d484ebd7c98e51fbc70fb2d944e55b69f6153c2c566b7`
 
 Publication used the reviewed website publisher with a temporary bucket writer, revoked afterward. Public downloads matched the immutable manifest. The GitHub release tag points to the built source.
+
+## Published release 0.0.5
+
+Version 0.0.5, build 19 was published on October 7, 2026 from source `b927a7980718d6dd85faa42df565e1f74d976aa5`. Verification passed 389 app tests. The release tooling is unchanged from the 20 passing tests for 0.0.4. The app and DMG were notarized and stapled.
+
+- Manifest SHA256: `c9c5b3608d0d514bbd5d71b854f0d43b308000f93f388ccec467bd1555f39a56`
+- DMG SHA256: `4f429f66973ea8ecd01a72336b4e12e81369e23b2b64f9c835e16b68311e90cc`
+- ZIP SHA256: `82c3d2a77d4abf8b5f8303a5d455fc3b1f23443d0f58e1f4efe59d50030031b7`
+- Signed feed SHA256: `9b1de4edebbc2acb63350b9a5b1938bfd2d2f78dcde532dc8cf10954b25cd524`
+
+Public downloads matched the immutable manifest. The temporary publication key was revoked. The installed app reports the expected source revision and preserves its designated requirement.

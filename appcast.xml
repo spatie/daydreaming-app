@@ -9,6 +9,22 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <description>Daydreaming updates.</description>
         <language>en</language>
         <item>
+            <title>0.0.5</title>
+            <pubDate>Wed, 07 Oct 2026 14:32:28 +0200</pubDate>
+            <sparkle:version>19</sparkle:version>
+            <sparkle:shortVersionString>0.0.5</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[# Daydreaming 0.0.5
+
+A small polish to the menu bar.
+
+- Adds an ellipsis to “Open Daydreaming…” in the menu bar menu.
+
+Requires macOS 26 or later.
+]]></description>
+            <enclosure url="https://getdaydreaming.com/releases/Daydreaming-0.0.5-19.dmg" length="7593724" type="application/octet-stream" sparkle:edSignature="Nssq6noEeWyTNvY4cGdTRu9E50xyb71/ll1NycvLnMVeVQFGMOJM/HYH0tZsgBvB2oWbDV0bBdYDuCMvIKtDAQ=="/>
+        </item>
+        <item>
             <title>0.0.4</title>
             <pubDate>Wed, 07 Oct 2026 14:24:43 +0200</pubDate>
             <sparkle:version>18</sparkle:version>
@@ -90,6 +106,6 @@ Daydreaming is free and postcardware. Image creation uses your own OpenAI API ac
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: Cp+VNFowTHgkOtJrtMcI087JgJII2k1NAK3BtqmrCCVphSfaUAegXklclktfFtKHcNDEUkaVZxPoLKvI7hzHBA==
-length: 5826
+edSignature: 3wJyPmG77ItYeJYwb82cIIYwUg5f2x2BvJt2lws5s7syV+UT2h7BI2AepK6q3PW/bMNhYbvu0n3fEUBtFqpaBw==
+length: 6639
 -->
