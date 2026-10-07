@@ -9,6 +9,25 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <description>Daydreaming updates.</description>
         <language>en</language>
         <item>
+            <title>0.0.3</title>
+            <pubDate>Wed, 07 Oct 2026 12:07:09 +0200</pubDate>
+            <sparkle:version>17</sparkle:version>
+            <sparkle:shortVersionString>0.0.3</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[# Daydreaming 0.0.3
+
+A calmer way to choose where your wallpaper gets its weather.
+
+- Keeps the selected weather location on one compact row. Choosing a fixed place opens a separate search popover instead of stacking controls in the sidebar.
+- Finds towns and cities as you type, and offers your picture's saved location without a long, truncated button.
+- Closing the chooser without selecting a place keeps your existing location.
+- Adds an idea example that follows the time of day and weather at your chosen location, from morning light to city lights after sunset, with softer colors in Dark Mode.
+
+Requires macOS 26 or later.
+]]></description>
+            <enclosure url="https://getdaydreaming.com/releases/Daydreaming-0.0.3-17.dmg" length="7593084" type="application/octet-stream" sparkle:edSignature="mLmcYFIuTJ9aq2JChy1KqLcgK8+7tpyIdefHyWesbh28BQeX0Rv3/8m35i1NNZunZAcr84D2LvvQE5AcgfuVBA=="/>
+        </item>
+        <item>
             <title>0.0.2</title>
             <pubDate>Wed, 07 Oct 2026 11:32:06 +0200</pubDate>
             <sparkle:version>16</sparkle:version>
@@ -52,6 +71,6 @@ Daydreaming is free and postcardware. Image creation uses your own OpenAI API ac
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: SPwdhFGCi0VyEO8hhH0UTVWaYjcIWMyRGK6JJPdYy0dOPECbw7OhbpjVbF/HWg2GPmZdxnVgPlJIfaqIk9HdDg==
-length: 3426
+edSignature: RmKITfa/xwwxYaFUkb8NYdp/UKvAXER6lCRypMuHTlIXIrWRFmvbcp0s7dGb/fbqYjT7hd2gwCcvSrePdNGxCw==
+length: 4718
 -->

@@ -127,3 +127,14 @@ Version 0.0.2, build 16 was published on October 7, 2026 from source `b27ad554a4
 - Signed feed SHA256: `9aaed9c387e488e00722da2f3ef8681ac66785e78fb1afd9077cdc7b773b4730`
 
 The release used the existing local notarization profile and dedicated Sparkle Keychain account. Website publication ran the same checked-in publisher with a temporary bucket writer, revoked after publication. Public downloads matched the manifest and `/download` selected the new DMG. For a local release, publish the immutable prepared directory first, create the GitHub release against its recorded source revision, then copy the published signed feed verbatim into this repository. Keep the release tag on the built source, rather than the later feed bookkeeping commit.
+
+## Published release 0.0.3
+
+Version 0.0.3, build 17 was published on October 7, 2026 from source `7dffb629aad1d35c646da4dccb42170e6c3c18c9`. Verification passed 389 app tests and 20 release tests. Native fixture checks covered the fixed-location row, place search, picture location and dismissal without changing the selected place. The app and DMG were notarized and stapled.
+
+- Manifest SHA256: `0fd1c276040a02d98960eee7d45e93962c07b242a7d8f7819e6c1923989ed029`
+- DMG SHA256: `d14b3fe9314e4f6e3628f5e2eaeb2e46b43a1e173c021c236ae34b6b7292ba1a`
+- ZIP SHA256: `23f3d23bf2cc58d04ab25d686a0c3d914d8059ce6968bfe8260af5c1410b0f36`
+- Signed feed SHA256: `6783d271854ac12e180c8f9dc82f3f75fb61ee533ccabdd10cedf6ca9a57c19c`
+
+Publication used the same local preparation and website publisher path as 0.0.2, with a newly created temporary bucket writer revoked afterward. Public archive hashes matched the immutable manifest.
