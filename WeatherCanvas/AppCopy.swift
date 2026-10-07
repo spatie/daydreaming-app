@@ -1,5 +1,6 @@
 /// Shared names keep help and accessibility text aligned with visible actions.
 enum AppCopy {
+    static let askForAFeature = "Ask for a feature…"
     static let usePictureAndIdeaAsWallpaper = "Use This Picture & Idea as Wallpaper"
     static let previousPictures = "Previous Pictures…"
     static let previousPicturesHelp = "Choose a previous original picture and its saved idea."

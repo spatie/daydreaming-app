@@ -27,7 +27,7 @@ final class CommunityWindowController: NSWindowController, NSWindowDelegate {
         let height = min(isSubmission ? 570.0 : 680.0, (NSScreen.main?.visibleFrame.height ?? 800) - 60)
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: width, height: height),
                               styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
-        window.title = isSubmission ? "Submit a Prompt" : "About Daydreaming"
+        window.title = isSubmission ? "Ask for a feature" : "About Daydreaming"
         window.identifier = NSUserInterfaceItemIdentifier(isSubmission ? "daydreaming.submit-prompt" : "daydreaming.about")
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
@@ -66,13 +66,13 @@ struct PromptSubmissionView: View {
                 Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 58, height: 58)
                 VStack(alignment: .leading, spacing: 5) {
                     Text("What should Daydreaming do next?").font(.title2.weight(.semibold))
-                    Text("Send Freek a prompt for a feature you'd love.").foregroundStyle(.secondary)
+                    Text("Tell Freek about a feature you'd love.").foregroundStyle(.secondary)
                 }
             }
             if let reference = draft.reference {
                 Spacer()
                 Image(systemName: "envelope.badge").font(.system(size: 36)).foregroundStyle(.purple)
-                Text("Your prompt is on its way.").font(.title2.weight(.semibold))
+                Text("Your request is on its way.").font(.title2.weight(.semibold))
                 Text("Freek will read it and decide what to build.").foregroundStyle(.secondary)
                 Text("Reference: \(reference)").font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
                 Spacer()
@@ -83,7 +83,7 @@ struct PromptSubmissionView: View {
                 }
             } else {
                 VStack(alignment: .leading, spacing: 7) {
-                    Text("Your prompt").font(.headline)
+                    Text("Your request").font(.headline)
                     ZStack(alignment: .topLeading) {
                         if draft.prompt.isEmpty {
                             Text("I'd love Daydreaming to…").foregroundStyle(.tertiary).padding(9).allowsHitTesting(false)
@@ -120,7 +120,7 @@ struct PromptSubmissionView: View {
                     Button { draft.submit() } label: {
                         HStack(spacing: 6) {
                             if draft.isSending { ProgressView().controlSize(.small) }
-                            Text(draft.isSending ? "Sending…" : "Submit Prompt")
+                            Text(draft.isSending ? "Sending…" : "Send request")
                         }
                     }
                     .buttonStyle(.borderedProminent).keyboardShortcut(.return, modifiers: .command)
@@ -129,7 +129,10 @@ struct PromptSubmissionView: View {
             }
         }
         .padding(26).padding(.top, 18)
-        .background(LogoBackdrop(isActive: false, inertia: .init()))
+        .background {
+            LogoBackdrop(isActive: false, inertia: .init())
+                .ignoresSafeArea(.container, edges: .top)
+        }
         .onAppear { textFocused = true }
         .onKeyPress(.escape) { close(); return .handled }
         .onDrop(of: [.fileURL], isTargeted: nil) { _ in true }
@@ -160,7 +163,10 @@ struct DaydreamingAboutView: View {
                     Link("getdaydreaming.com", destination: URL(string: "https://getdaydreaming.com")!).font(.callout)
                 }
                 .frame(maxWidth: .infinity).padding(.top, 42).padding(.bottom, 25)
-                .background(LogoBackdrop(isActive: false, inertia: .init()))
+                .background {
+                    LogoBackdrop(isActive: false, inertia: .init())
+                        .ignoresSafeArea(.container, edges: .top)
+                }
                 VStack(alignment: .leading, spacing: 18) {
                     HStack(alignment: .firstTextBaseline) {
                         Text("Made by").foregroundStyle(.secondary)
@@ -207,7 +213,7 @@ struct DaydreamingAboutView: View {
                     }
                     Divider()
                     HStack {
-                        Button("Submit a Prompt…") { CommunityWindowController.showSubmission() }.buttonStyle(.link)
+                        Button(AppCopy.askForAFeature) { CommunityWindowController.showSubmission() }.buttonStyle(.link)
                         Spacer()
                         Link("spatie.be", destination: URL(string: "https://spatie.be")!).foregroundStyle(.secondary)
                     }.font(.callout)

@@ -16,7 +16,7 @@ struct PromptSubmission: Codable, Equatable, Sendable {
     static func validationError(prompt: String, name: String, email: String) -> String? {
         let text = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         if text.isEmpty { return "Tell us what you would like Daydreaming to do." }
-        if text.unicodeScalars.count > 5_000 { return "Keep your prompt within 5,000 characters." }
+        if text.unicodeScalars.count > 5_000 { return "Keep your request within 5,000 characters." }
         let credit = normalizedName(name)
         if credit.unicodeScalars.count > 60 { return "Keep your name within 60 characters." }
         if !credit.isEmpty && credit.range(of: "^[\\p{L}\\p{N} ._'-]+$", options: .regularExpression) == nil {
@@ -39,10 +39,10 @@ enum PromptSubmissionError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .unavailable: "Submissions are disabled in test copies of Daydreaming."
-        case .rejected(429): "Too many submissions for now. Your prompt is kept here. Try again later."
+        case .rejected(429): "Too many submissions for now. Your request is kept here. Try again later."
         case .rejected(409): "This submission changed after it was sent. Reopen the form to try again."
-        case .rejected: "Couldn't send your prompt. It is kept here so you can try again."
-        case .invalidReceipt: "Couldn't confirm delivery. Try again with the same prompt."
+        case .rejected: "Couldn't send your request. It is kept here so you can try again."
+        case .invalidReceipt: "Couldn't confirm delivery. Try again with the same request."
         }
     }
 }
@@ -144,7 +144,7 @@ final class PromptSubmissionDraft {
             } catch {
                 guard currentAttempt == attempt else { return }
                 self.error = (error as? PromptSubmissionError)?.errorDescription
-                    ?? "Couldn't send your prompt. It is kept here so you can try again."
+                    ?? "Couldn't send your request. It is kept here so you can try again."
             }
             isSending = false
             task = nil
@@ -157,7 +157,7 @@ final class PromptSubmissionDraft {
         task?.cancel()
         task = nil
         isSending = false
-        error = "Couldn't confirm delivery. Your prompt is kept here. Try again when you're ready."
+        error = "Couldn't confirm delivery. Your request is kept here. Try again when you're ready."
     }
 
     func startAnother() { reference = nil; error = nil }

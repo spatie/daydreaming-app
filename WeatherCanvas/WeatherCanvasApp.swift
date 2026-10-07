@@ -49,7 +49,7 @@ private struct DaydreamingCommands: Commands {
         }
         CommandGroup(replacing: .help) {
             Button("Daydreaming Help") { NSWorkspace.shared.open(URL(string: "https://getdaydreaming.com/support")!) }
-            Button("Submit a Prompt…") { CommunityWindowController.showSubmission() }
+            Button(AppCopy.askForAFeature) { CommunityWindowController.showSubmission() }
             Divider()
             Button("Send Us a Postcard…") { CommunityWindowController.showAbout(postcard: true) }
         }
@@ -221,6 +221,8 @@ private struct MenuBarContent: View {
                 Button(title) { model.cancelQueue() }
             }
         }
+        Divider()
+        Button(AppCopy.askForAFeature) { CommunityWindowController.showSubmission() }
         Divider()
         Button("Quit Daydreaming") { NSApp.terminate(nil) }
         Divider()

@@ -58,7 +58,7 @@ Bug reports, focused pull requests and thoughtful interface improvements are wel
 - [Suggest a feature](https://github.com/spatie/daydreaming-app/issues/new?template=feature_request.yml)
 - [Report a security issue privately](https://github.com/spatie/daydreaming-app/security/advisories/new)
 
-You can also send a feature prompt from the app's Help menu. Read [SECURITY.md](SECURITY.md) before sharing security-sensitive information.
+You can also ask for a feature from the app's Help menu or menu bar. Read [SECURITY.md](SECURITY.md) before sharing security-sensitive information.
 
 ## Architecture and releases
 
