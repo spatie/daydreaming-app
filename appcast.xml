@@ -9,6 +9,19 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <description>Daydreaming updates.</description>
         <language>en</language>
         <item>
+            <title>0.0.7</title>
+            <pubDate>Wed, 07 Oct 2026 16:20:05 +0200</pubDate>
+            <sparkle:version>21</sparkle:version>
+            <sparkle:shortVersionString>0.0.7</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[- Aligned Back, Skip Setup, and Continue in the welcome wizard and removed the extra credit captions.
+- The welcome title now matches the website: "See your old wallpaper in a new light."
+- Shortened the final setup step and made its text size consistent.
+- Fixed a launch crash on macOS 26 caused by an unavailable Swift Vision symbol in picture descriptions.
+]]></description>
+            <enclosure url="https://getdaydreaming.com/releases/Daydreaming-0.0.7-21.dmg" length="7694912" type="application/octet-stream" sparkle:edSignature="aIN1lbSw3Q8v2R1AIzFCOMNzs9n/6zC/voYyJBQQlq/L4yy29hV6THLdADvUAABwtI/pmeBcWs0yiZorfsDEDg=="/>
+        </item>
+        <item>
             <title>0.0.6</title>
             <pubDate>Wed, 07 Oct 2026 15:12:17 +0200</pubDate>
             <sparkle:version>20</sparkle:version>
@@ -120,6 +133,6 @@ Daydreaming is free and postcardware. Image creation uses your own OpenAI API ac
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: mfhR8E07I1ggactJFcQhkXnAcRtXlKecnHjEMUEKIjFvTNzUp+HPU0mxxS7XJgd4Kz9Uj1C32qO599vZwNBCBA==
-length: 7760
+edSignature: 18si5r/JllZVM17IWDN8Fq7Qlz3TjgaK0dalYgTAz0mWNHOun6kAqQxEgIwQTZ7UrmFdPtWoyqGaSjUfnztnBw==
+length: 8781
 -->

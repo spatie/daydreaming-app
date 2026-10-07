@@ -171,3 +171,16 @@ Version 0.0.6, build 20 was published on October 7, 2026 from source `057108ab64
 - Signed feed SHA256: `c9ace5527479dd82f07eb41f7cfddcb7078c979bfae5710d711dea24bdfeca83`
 
 Public downloads matched the immutable manifest. The temporary publication key was revoked. The installed app reports the built source revision and preserves its designated requirement. Automatic downloading remains disabled.
+
+## Published release 0.0.7
+
+Version 0.0.7, build 21 was published on October 7, 2026 from source `15a9508871e5921971c143c5e030b750cf4201dc`. Verification passed 396 app tests locally and on the GitHub macOS 26 runner ([Checks run](https://github.com/spatie/daydreaming-app/actions/runs/37635302984)), plus 20 release-tool tests. The real local picture classifier is tested against the bundled image and a missing file. Release validation rejects the specific Swift Vision import reported missing on macOS 26.6.2. Both universal slices passed that guard. The compatible Objective-C request keeps this optional image analysis on the CPU.
+
+Native isolated fixtures confirmed the website welcome title, removed credit captions, aligned navigation and shorter final-step text at minimum window size. A clean first launch of the previous binary worked on the owner's macOS 27, but did not reproduce the reported macOS 26 launch failure. The supplied crash report identified a DYLD missing-symbol failure before application startup. The corrected distributed binary has not been tested directly on Marceli's Mac.
+
+- Manifest SHA256: `a57a71b0c5352cdd51c439ddabb35f240defb5e2ef5d4497cec4c93c5a2c0e36`
+- DMG SHA256: `dbbff876e3f74aea4a5ecd87b31f951b79dbde46c9758505c4f03156a1c05034`
+- ZIP SHA256: `842dfc0d2c6d456668cb696ab977d41cf3db7f15d5dc599acabcbbb1a78b3d35`
+- Signed feed SHA256: `9cafd4257d7113210052a750e28f2e7a2393407af4bfacf2fc10b4a6a72a6c6e`
+
+The universal app and DMG were notarized and stapled. Public downloads matched the immutable manifest. The temporary publication key was revoked. The installed app reports the built source revision and preserves its designated requirement. The GitHub tag points to the built source.
