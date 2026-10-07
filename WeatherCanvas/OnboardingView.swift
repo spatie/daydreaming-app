@@ -69,7 +69,7 @@ struct OnboardingView: View {
             }
 
             Divider()
-            HStack(alignment: .bottom, spacing: 16) {
+            HStack(spacing: 16) {
                 Button("Skip Setup") { connectionTask?.cancel(); model.skipOnboarding() }
                     .buttonStyle(.plain).foregroundStyle(.secondary)
                     .disabled(model.isCheckingImageConnection)
@@ -85,21 +85,12 @@ struct OnboardingView: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                VStack(alignment: .trailing, spacing: 8) {
-                    if step == 3 && model.onboardingWeatherReady {
-                        Text("Creates your first wallpaper now. \(model.imageBillingNotice)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 300)
-                    }
-                    Button(primaryTitle, action: advance)
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.large)
-                        .keyboardShortcut(.defaultAction)
-                        .disabled(!canContinue)
-                }
+                Button(primaryTitle, action: advance)
+                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(!canContinue)
             }
+            .controlSize(.large)
             .padding(22)
         }
         .onAppear {
@@ -114,7 +105,7 @@ struct OnboardingView: View {
 
     private var welcome: some View {
         VStack(spacing: 18) {
-            Text("See your picture in a new light.")
+            Text("See your old wallpaper in a new light.")
                 .font(.system(size: 32, weight: .medium, design: .serif))
                 .multilineTextAlignment(.center)
             Text("Daydreaming uses AI to match your picture to the time and local weather, then sets it as your Mac wallpaper.")
@@ -132,8 +123,6 @@ struct OnboardingView: View {
             .frame(maxWidth: 640, maxHeight: 280)
             .accessibilityElement(children: .combine)
             .accessibilityLabel("The same Yosemite picture in daylight and at night. An example of how Daydreaming changes your wallpaper.")
-            Text("New images use your AI account's credit.")
-                .font(.caption).foregroundStyle(.secondary)
         }
     }
 
