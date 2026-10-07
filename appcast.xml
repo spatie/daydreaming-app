@@ -9,6 +9,20 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <description>Daydreaming updates.</description>
         <language>en</language>
         <item>
+            <title>0.0.6</title>
+            <pubDate>Wed, 07 Oct 2026 15:12:17 +0200</pubDate>
+            <sparkle:version>20</sparkle:version>
+            <sparkle:shortVersionString>0.0.6</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[- See “App update available…” in the menu bar when a new version is found. Open it to download and install when you are ready.
+- Pictures now get a short, automatic description instead of a filename. Descriptions are made locally and do not use AI credit.
+- Fixed mouse clicks on Crop picture being intercepted by the preview.
+- Added shorter, separate idea examples for time, location, and Dark Mode.
+- Made the verified AI connection indicator quieter.
+]]></description>
+            <enclosure url="https://getdaydreaming.com/releases/Daydreaming-0.0.6-20.dmg" length="7705721" type="application/octet-stream" sparkle:edSignature="8UwbB0HEG8Y/D8Yqfkk+VGSvO16ePZoccKPbXQev+HEmH2cQMbUyqp7CvoLE3bsghbtT3Xpo2fvRDXbeejaZDw=="/>
+        </item>
+        <item>
             <title>0.0.5</title>
             <pubDate>Wed, 07 Oct 2026 14:32:28 +0200</pubDate>
             <sparkle:version>19</sparkle:version>
@@ -106,6 +120,6 @@ Daydreaming is free and postcardware. Image creation uses your own OpenAI API ac
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 3wJyPmG77ItYeJYwb82cIIYwUg5f2x2BvJt2lws5s7syV+UT2h7BI2AepK6q3PW/bMNhYbvu0n3fEUBtFqpaBw==
-length: 6639
+edSignature: mfhR8E07I1ggactJFcQhkXnAcRtXlKecnHjEMUEKIjFvTNzUp+HPU0mxxS7XJgd4Kz9Uj1C32qO599vZwNBCBA==
+length: 7760
 -->

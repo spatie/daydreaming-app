@@ -60,7 +60,7 @@ For interrupted publication, download the verified workflow artifact and resume 
 
 Publication is blocked whenever these credentials or download storage are missing. A signed local design-preview DMG is not a notarized public release.
 
-Sparkle is pinned to [2.10.0](https://github.com/sparkle-project/Sparkle/releases/tag/2.10.0). The feed is `https://getdaydreaming.com/appcast.xml`. Production Release builds use the feed when their committed public key is valid. Debug, preview identifiers, hosted tests and local channels never start an updater. Automatic checks run once a day by default, without a first-run permission question, like Bloom. Sparkle owns the saved Settings preference, so opting out remains respected. Automatic checks remain separate from wallpaper refreshes.
+Sparkle is pinned to [2.10.0](https://github.com/sparkle-project/Sparkle/releases/tag/2.10.0). The feed is `https://getdaydreaming.com/appcast.xml`. Production Release builds use the feed when their committed public key is valid. Debug, preview identifiers, hosted tests and local channels never start an updater. Automatic checks run once a day by default, without a first-run permission question, like Bloom. Sparkle owns the saved Settings preference, so opting out remains respected. Automatic checks remain separate from wallpaper refreshes. When Sparkle finds a valid update, “App update available…” appears near the bottom of the menu bar menu, above the disabled status rows. It stays available after the update window closes. Clicking it opens Sparkle; downloading and installing still require the user's choice.
 
 The unique signing account is `be.spatie.daydreaming.sparkle`. Its key was created specifically for Daydreaming. Never use Sparkle's default `ed25519` account or Bloom's signing key. The public key belongs in `DAYDREAMING_SPARKLE_PUBLIC_KEY` in `project.yml`. The private key stays in Keychain. Coordinate with the owner before creating, replacing or exporting a signing key.
 
@@ -160,3 +160,14 @@ Version 0.0.5, build 19 was published on October 7, 2026 from source `b927a79807
 - Signed feed SHA256: `9b1de4edebbc2acb63350b9a5b1938bfd2d2f78dcde532dc8cf10954b25cd524`
 
 Public downloads matched the immutable manifest. The temporary publication key was revoked. The installed app reports the expected source revision and preserves its designated requirement.
+
+## Published release 0.0.6
+
+Version 0.0.6, build 20 was published on October 7, 2026 from source `057108ab647f0932aa5395e6b2873c575dc4c160`. Verification passed 395 app tests and 20 release tests. Tests cover update availability after dismissal, clearing it when no valid update exists, and local picture-description caching. Native checks confirmed that mouse clicks open Crop in both an isolated fixture and the installed app. Automatic descriptions and the short idea examples were inspected natively. The universal app and DMG were notarized and stapled.
+
+- Manifest SHA256: `f70540d72c768c4c94a685e7bf9c0ca3cdf4f4049477f1608c3195fa0adb8c28`
+- DMG SHA256: `0951186e1c4f48408c45700cf67e976a8b5d1e62da8b1b7d615fc6625835d6d5`
+- ZIP SHA256: `7ee974697ff2417d3da3d4fc8f307594b099d7bee4c01d24670c0b23407e2df3`
+- Signed feed SHA256: `c9ace5527479dd82f07eb41f7cfddcb7078c979bfae5710d711dea24bdfeca83`
+
+Public downloads matched the immutable manifest. The temporary publication key was revoked. The installed app reports the built source revision and preserves its designated requirement. Automatic downloading remains disabled.
