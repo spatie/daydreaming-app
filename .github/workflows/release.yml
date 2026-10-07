@@ -145,7 +145,7 @@ jobs:
           DAYDREAMING_S3_PREFIX: ${{ vars.DAYDREAMING_S3_PREFIX }}
           DAYDREAMING_OBJECT_BASE_URL: ${{ vars.DAYDREAMING_OBJECT_BASE_URL }}
         run: python3 scripts/release/publish.py "$RUNNER_TEMP/release-artifacts" --sparkle-key-file "$RUNNER_TEMP/daydreaming-sparkle.key"
-      - name: Create private GitHub release with automatic notes and tag
+      - name: Create GitHub release with automatic notes and tag
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.metadata.outputs.tag }}

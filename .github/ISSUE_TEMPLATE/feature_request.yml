@@ -1,0 +1,17 @@
+name: Feature request
+description: Suggest a focused improvement.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: Describe the problem or workflow, rather than only a proposed button.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would help?
+      description: Include an example and any alternatives you considered.
+    validations:
+      required: true

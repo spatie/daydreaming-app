@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security report
+    url: https://github.com/spatie/daydreaming-app/security/advisories/new
+    about: Report a vulnerability privately.
+  - name: App support
+    url: https://getdaydreaming.com/support
+    about: Setup, API keys, and using Daydreaming.

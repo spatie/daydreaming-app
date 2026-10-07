@@ -13,7 +13,6 @@
   <ellipse cx="360" cy="220" rx="470" ry="250" fill="url(#glow)"/>
   <g fill="#302b45" text-anchor="middle" font-family="Helvetica Neue, Helvetica, sans-serif">
     <text x="360" y="80" font-size="36" font-weight="600" letter-spacing="-1.1">Daydreaming</text>
-    <text x="360" y="111" font-size="15" fill="#71667c">A new view, all day.</text>
   </g>
   <path d="M309 218 C337 209 351 237 387 224 L408 218 M395 206 L410 218 L400 232"
         fill="none" stroke="#9585ae" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>

@@ -1,13 +1,37 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><!-- sparkle-sign-warning:
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<!-- sparkle-sign-warning:
 IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
---><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
-  <channel>
-    <title>Daydreaming</title>
-    <link>https://getdaydreaming.com</link>
-    <description>Daydreaming updates.</description>
-    <language>en</language>
-  </channel>
-</rss><!-- sparkle-signatures:
-edSignature: YKHoCTYYrUIi0XAAaIXnE3ZTjbdOWCzxyFadpbFfvJDpFrgtMRGpRD46TMEBJFDP53u5MMqCA3XKoTuQBIbIBw==
-length: 565
+-->
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>Daydreaming</title>
+        <link>https://getdaydreaming.com</link>
+        <description>Daydreaming updates.</description>
+        <language>en</language>
+        <item>
+            <title>0.0.1</title>
+            <pubDate>Wed, 07 Oct 2026 08:07:30 +0200</pubDate>
+            <sparkle:version>11</sparkle:version>
+            <sparkle:shortVersionString>0.0.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[# Daydreaming 0.0.1
+
+Our first release: your favorite picture, changing with the day.
+
+- Choose a picture and describe how you want it to feel.
+- Preview the day and crop your original in the same window.
+- Let your wallpaper follow the time and local weather on your chosen schedule.
+- Revisit previous pictures and reuse saved variations.
+- Set a daily image limit and see update progress in the menu bar.
+- Send a feature prompt to Freek from the Help menu.
+
+Daydreaming is free and postcardware. Image creation uses your own OpenAI API account and its credit. Requires macOS 26 or later.
+]]></description>
+            <enclosure url="https://getdaydreaming.com/releases/Daydreaming-0.0.1-11.dmg" length="7489461" type="application/octet-stream" sparkle:edSignature="P/2x9JhvUSUZW7Jcn4WmNdQVaepz2LaQZhVqeGhGZhRXfcMe5uSMiAHc70xlxUinw3+tCQHdnHxk8zR09ZscCw=="/>
+        </item>
+    </channel>
+</rss>
+<!-- sparkle-signatures:
+edSignature: ZavHxMb9ElIWI7uKm9Hloi0tXNeaOS9DVe5/Mxg+eq1gRXY66CSbNjj3oznI4L2S/nwxBf7BMBepV3Mhe8kUAg==
+length: 1840
 -->

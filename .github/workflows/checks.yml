@@ -1,0 +1,40 @@
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check workflow and secrets
+        run: |
+          set -euo pipefail
+          brew install xcodegen actionlint gitleaks openssl@3
+          echo "DAYDREAMING_OPENSSL=$(brew --prefix openssl@3)/bin/openssl" >> "$GITHUB_ENV"
+          actionlint
+          gitleaks git . --redact=100 --no-banner
+      - name: Test release safety
+        run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/release/tests -v
+      - name: Test app with isolated services
+        run: |
+          set -euo pipefail
+          xcodegen generate
+          xcodebuild test -project Daydreaming.xcodeproj -scheme Daydreaming -configuration Debug \
+            -destination 'platform=macOS' -derivedDataPath "$RUNNER_TEMP/test-build" \
+            -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile \
+            PRODUCT_BUNDLE_IDENTIFIER=be.spatie.daydreaming.preview.tests CODE_SIGNING_ALLOWED=NO

@@ -1,0 +1,32 @@
+name: Bug report
+description: Tell us what went wrong in Daydreaming.
+body:
+  - type: markdown
+    attributes:
+      value: Please remove keys, private pictures and personal logs. Report security issues through the Security tab instead.
+  - type: input
+    id: version
+    attributes:
+      label: Daydreaming version
+      description: Find it in About Daydreaming.
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version and Mac architecture
+      placeholder: macOS 26, Apple silicon
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How can we reproduce it?
+      description: Include steps, what happened, and what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots or useful details
+      description: Optional. Redact private information before attaching anything.
