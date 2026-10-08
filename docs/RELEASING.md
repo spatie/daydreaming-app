@@ -188,3 +188,14 @@ Native isolated fixtures confirmed the website welcome title, removed credit cap
 - Signed feed SHA256: `9cafd4257d7113210052a750e28f2e7a2393407af4bfacf2fc10b4a6a72a6c6e`
 
 The universal app and DMG were notarized and stapled. Public downloads matched the immutable manifest. The temporary publication key was revoked. The installed app reports the built source revision and preserves its designated requirement. The GitHub tag points to the built source.
+
+## Published release 0.9.0
+
+Version 0.9.0, build 53 was published on October 8, 2026 from source `4f0c14ba5d30c1319c2583f3a32b3957c1a6dfae`. Verification passed 402 app tests, 22 release-tool tests and 43 website tests. The universal app and DMG were notarized and stapled.
+
+- Manifest SHA256: `d39124e0bae36a081866f76735cd7d739fec7d88795dd302714965258b59d0e8`
+- DMG SHA256: `8084092a45429380a3a2ee69ffd4fd51e9187e23b9eec892fef80de98ef34feb`
+- ZIP SHA256: `c62f8385a94829bdbec8c545dbefcf147b811bd2847809eaf178c1b66c07050b`
+- Signed feed SHA256: `969fd41d112887a76aac5a08327ac226b575f414f8f02b814ec3e1593045de89`
+
+Public downloads and the live signed feed matched the manifest. The temporary publication key was revoked. The installed app reported the expected source revision and sent its Mac name to the private installation admin. The GitHub tag points to the built source.

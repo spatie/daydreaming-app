@@ -9,6 +9,21 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <description>Daydreaming updates.</description>
         <language>en</language>
         <item>
+            <title>0.9.0</title>
+            <pubDate>Thu, 08 Oct 2026 13:32:26 +0200</pubDate>
+            <sparkle:version>53</sparkle:version>
+            <sparkle:shortVersionString>0.9.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[- Restore the saved desktop wallpaper after macOS starts.
+- Keep earlier hourly images visible when a forecast changes, while showing that the preview needs an update.
+- Use Apple Weather for current and hourly conditions. Its localized description and detailed weather data now guide image creation and the manual Codex handoff. MET Norway remains available when Apple Weather cannot respond.
+- Handle very light showers more accurately in the MET Norway fallback.
+- Move the required Apple Weather credit to a quieter place in Settings and simplify the wallpaper quality section.
+- Include the Mac computer name in installation statistics shown in the private admin. You can turn off these reports in Settings.
+]]></description>
+            <enclosure url="https://getdaydreaming.com/releases/Daydreaming-0.9.0-53.dmg" length="8021868" type="application/octet-stream" sparkle:edSignature="G9J7M3YMKZvpSxaYZqA/5mtzbLfAzsw8t9h/ukz1G/Q7lSoN46fY8vREAZJx4E/ghy11CKE3eZP4UYFixV0CAw=="/>
+        </item>
+        <item>
             <title>0.0.7</title>
             <pubDate>Wed, 07 Oct 2026 16:20:05 +0200</pubDate>
             <sparkle:version>21</sparkle:version>
@@ -133,6 +148,6 @@ Daydreaming is free and postcardware. Image creation uses your own OpenAI API ac
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 18si5r/JllZVM17IWDN8Fq7Qlz3TjgaK0dalYgTAz0mWNHOun6kAqQxEgIwQTZ7UrmFdPtWoyqGaSjUfnztnBw==
-length: 8781
+edSignature: vcopjYPF10my5noeCnPLzVCWDf+hbpDJLZfUOAKXJwjL9ZTGySfjXKaJUvH+b4XHEFTGoMzZQ4hzh7qBw4LACg==
+length: 10154
 -->
