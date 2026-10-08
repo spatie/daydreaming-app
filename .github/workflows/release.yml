@@ -71,6 +71,7 @@ jobs:
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
           DAYDREAMING_SPARKLE_PRIVATE_KEY: ${{ secrets.DAYDREAMING_SPARKLE_PRIVATE_KEY }}
+          DAYDREAMING_WEATHERKIT_PROFILE: ${{ secrets.DAYDREAMING_WEATHERKIT_PROFILE }}
           DAYDREAMING_S3_ACCESS_KEY_ID: ${{ secrets.DAYDREAMING_S3_ACCESS_KEY_ID }}
           DAYDREAMING_S3_SECRET_ACCESS_KEY: ${{ secrets.DAYDREAMING_S3_SECRET_ACCESS_KEY }}
           DAYDREAMING_RELEASE_TOKEN: ${{ secrets.DAYDREAMING_RELEASE_TOKEN }}
@@ -116,6 +117,7 @@ jobs:
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
           DAYDREAMING_SPARKLE_PRIVATE_KEY: ${{ secrets.DAYDREAMING_SPARKLE_PRIVATE_KEY }}
+          DAYDREAMING_WEATHERKIT_PROFILE: ${{ secrets.DAYDREAMING_WEATHERKIT_PROFILE }}
         run: python3 scripts/release/ci.py setup
       - name: Build, sign, notarize, staple and verify app and branded DMG
         env:
@@ -126,6 +128,7 @@ jobs:
             --identity 'Developer ID Application: Spatie (97KRXCRMAY)' --notary-profile daydreaming-ci \
             --notes "$RUNNER_TEMP/release-notes/notes.html" --generated-notes \
             --sparkle-key-file "$RUNNER_TEMP/daydreaming-sparkle.key" \
+            --weatherkit-profile "$RUNNER_TEMP/daydreaming-weatherkit.provisionprofile" \
             --previous-feed "$RUNNER_TEMP/prior-appcast.xml" --output "$RUNNER_TEMP/release-artifacts"
       - name: Keep verified artifacts for recovery
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

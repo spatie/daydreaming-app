@@ -10,6 +10,7 @@ import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 from dmg import verify as verify_dmg
 from feed import DOWNLOAD_PREFIX, FEED_URL, validate
 from prepare import TEAM, validate_app
@@ -43,6 +44,10 @@ def check_manifest(directory):
         raise ValueError("Invalid release identity")
     if manifest["teamIdentifier"] != TEAM or manifest["bundleIdentifier"] != "be.spatie.daydreaming":
         raise ValueError("Incorrect release signing identity")
+    try:
+        uuid.UUID(manifest["weatherKitProfileUUID"])
+    except (KeyError, TypeError, ValueError):
+        raise ValueError("Missing or invalid WeatherKit provisioning profile UUID") from None
     if not re.fullmatch(r"[a-f0-9]{40}", manifest["gitRevision"]):
         raise ValueError("Invalid release revision")
     for name, digest in manifest["artifacts"].items():
@@ -67,7 +72,7 @@ def verify_signatures(directory, manifest, work, key_file):
     app = work / "Daydreaming.app"
     stem = f'Daydreaming-{manifest["version"]}-{manifest["build"]}'
     subprocess.run(["ditto", "-x", "-k", str(directory / f"{stem}.zip"), str(work)], check=True)
-    validate_app(app, manifest["version"], manifest["build"], manifest["gitRevision"])
+    validate_app(app, manifest["version"], manifest["build"], manifest["gitRevision"], manifest["weatherKitProfileUUID"])
     for suffix in ("dmg", "zip"):
         name = f"{stem}.{suffix}"
         subprocess.run([str(tools / "sign_update"), "--verify", *signing,

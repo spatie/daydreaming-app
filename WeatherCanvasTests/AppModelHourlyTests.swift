@@ -4,6 +4,40 @@ import XCTest
 final class AppModelHourlyTests: XCTestCase {
 
     @MainActor
+    func testLaunchRestoresSavedWallpaperWithoutCreatingAnImageOrMovingTheNextCheck() throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        let saved = fake.directory.appendingPathComponent("saved-wallpaper.png")
+        try Data("saved wallpaper".utf8).write(to: saved)
+        let nextCheck = fake.clock.addingTimeInterval(1_800)
+        let model = fake.model(nextCheck: nextCheck, savedDesktopAtLaunch: saved)
+
+        model.restoreSavedDesktopAtLaunch()
+
+        XCTAssertEqual(fake.applied, [saved])
+        XCTAssertTrue(fake.created.isEmpty)
+        XCTAssertEqual(fake.ledger.count(on: fake.clock), 0)
+        XCTAssertEqual(model.nextCheck(after: fake.clock), nextCheck)
+        XCTAssertNil(model.lastUpdated)
+    }
+
+    @MainActor
+    func testPausedOrMissingSavedWallpaperIsNotRestoredAtLaunch() throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        let saved = fake.directory.appendingPathComponent("saved-wallpaper.png")
+        try Data("saved wallpaper".utf8).write(to: saved)
+        fake.settings.automaticUpdates = false
+        fake.model(savedDesktopAtLaunch: saved).restoreSavedDesktopAtLaunch()
+        XCTAssertTrue(fake.applied.isEmpty)
+
+        fake.settings.automaticUpdates = true
+        try FileManager.default.removeItem(at: saved)
+        fake.model(savedDesktopAtLaunch: saved).restoreSavedDesktopAtLaunch()
+        XCTAssertTrue(fake.applied.isEmpty)
+    }
+
+    @MainActor
     func testModeChangeAppliesFullCacheImmediatelyWithoutPaymentEvenAtTheLimit() async throws {
         let fake = try AppHourlyFake()
         defer { fake.removeFiles() }
@@ -1196,10 +1230,10 @@ final class AppModelHourlyTests: XCTestCase {
         let model = fake.model()
         defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
         model.browseSavedVariation(direction: 1)
-        XCTAssertEqual(model.menuWeatherStatus, "Weather now · Unavailable")
+        XCTAssertEqual(model.menuWeatherStatus, "Forecast this hour · Unavailable")
         await model.refreshWorkspaceWeather()
         XCTAssertEqual(model.workspaceWeather?.label, "rainy")
-        XCTAssertEqual(model.menuWeatherStatus, "Weather now · Rainy")
+        XCTAssertEqual(model.menuWeatherStatus, "Forecast this hour · Rainy")
         XCTAssertEqual(model.previewWeather?.label, "clear")
         for _ in 0..<10 { await model.refreshWorkspaceWeather() }
         XCTAssertEqual(fake.weatherCalls, 1)
@@ -3294,7 +3328,7 @@ private final class AppHourlyFake {
         settings.automaticUpdates = true
     }
 
-    func model(nextCheck: Date? = nil) -> AppModel {
+    func model(nextCheck: Date? = nil, savedDesktopAtLaunch: URL? = nil) -> AppModel {
         let promptReader: (@MainActor @Sendable (HourlyGenerationJob) async throws -> String)?
         if useRealSourceBody { promptReader = nil }
         else {
@@ -3368,7 +3402,8 @@ private final class AppHourlyFake {
                 try FileManager.default.removeItem(at: file)
             }
         }
-        return AppModel(settings: settings, hourlyServices: services, nextScheduledCheck: nextCheck)
+        return AppModel(settings: settings, hourlyServices: services, nextScheduledCheck: nextCheck,
+                        savedDesktopAtLaunch: savedDesktopAtLaunch)
     }
 
     func job(hour: Int, date: Date? = nil, intent: HourlyGenerationJob.Intent, settings snapshot: CanvasSettings? = nil) -> HourlyGenerationJob {

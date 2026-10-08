@@ -168,14 +168,25 @@ final class HourWallpaperCacheTests: XCTestCase {
         XCTAssertTrue(changed.usesOldRecipe)
     }
 
-    func testMissingCachedFilesAreIgnoredAndOnlyCurrentWeatherMatches() throws {
+    func testChangedWeatherShowsSavedPreviewWithoutReusingItAsAnExactMatch() throws {
         let directory = try temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         var cache = HourWallpaperCache(directory: directory)
         let url = try picture("wallpaper.png", in: directory)
+        let oldRecipe = try picture("old-recipe.png", in: directory)
+        try cache.record(pictureID: "picture", recipeID: "previous", hour: 14, weather: weather("rain"), url: oldRecipe)
         try cache.record(pictureID: "picture", recipeID: "current", hour: 14, weather: weather("clear"), url: url)
-        XCTAssertNil(cache.preview(pictureID: "picture", recipeID: "current", hour: 14, weather: "rain"))
+        let changed = try XCTUnwrap(cache.preview(pictureID: "picture", recipeID: "current", hour: 14, weather: "rain"))
+        XCTAssertEqual(changed.url, url)
+        XCTAssertTrue(changed.needsUpdate)
+        XCTAssertTrue(changed.weatherChanged)
+        XCTAssertFalse(changed.usesOldRecipe)
+        XCTAssertNil(cache.exact(pictureID: "picture", recipeID: "current", hour: 14, weather: "rain"))
         try FileManager.default.removeItem(at: url)
+        let previous = try XCTUnwrap(cache.preview(pictureID: "picture", recipeID: "current", hour: 14, weather: "rain"))
+        XCTAssertEqual(previous.url, oldRecipe)
+        XCTAssertTrue(previous.usesOldRecipe)
+        try FileManager.default.removeItem(at: oldRecipe)
         XCTAssertNil(cache.preview(pictureID: "picture", recipeID: "current", hour: 14, weather: "clear"))
     }
 

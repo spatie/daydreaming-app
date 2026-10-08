@@ -1,6 +1,7 @@
 import Foundation
+import SystemConfiguration
 
-/// Counts installations with a random app-local token, never hardware or account identity.
+/// Counts installations with a random app-local token and the Mac's computer name.
 @MainActor
 final class InstallationReporter {
     static let shared = InstallationReporter()
@@ -41,6 +42,7 @@ final class InstallationReporter {
         let appVersion: String
         let appBuild: String
         let macOSVersion: String
+        let macName: String
         let architecture: String
 
         static var current: Self {
@@ -52,9 +54,13 @@ final class InstallationReporter {
             #else
             let architecture = "unknown"
             #endif
+            let computerName = (SCDynamicStoreCopyComputerName(nil, nil) as String?)
+                ?? Host.current().localizedName
+                ?? ProcessInfo.processInfo.hostName
             return Self(appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0",
                         appBuild: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0",
                         macOSVersion: "\(version.majorVersion).\(version.minorVersion).\(version.patchVersion)",
+                        macName: String(computerName.trimmingCharacters(in: .whitespacesAndNewlines).prefix(120)),
                         architecture: architecture)
         }
     }
@@ -64,14 +70,16 @@ final class InstallationReporter {
         let appVersion: String
         let appBuild: String
         let macOSVersion: String
+        let macName: String
         let architecture: String
         let reportedAt: Date
-        let schemaVersion = 1
+        let schemaVersion = 2
         enum CodingKeys: String, CodingKey {
             case token, architecture
             case appVersion = "app_version"
             case appBuild = "app_build"
             case macOSVersion = "macos_version"
+            case macName = "mac_name"
             case reportedAt = "reported_at"
             case schemaVersion = "schema_version"
         }
@@ -161,7 +169,7 @@ final class InstallationReporter {
             defaults.set(token, forKey: Self.tokenKey)
         }
         let payload = Payload(token: token, appVersion: metadata.appVersion, appBuild: metadata.appBuild,
-                              macOSVersion: metadata.macOSVersion, architecture: metadata.architecture,
+                              macOSVersion: metadata.macOSVersion, macName: metadata.macName, architecture: metadata.architecture,
                               reportedAt: date)
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601

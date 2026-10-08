@@ -3,6 +3,7 @@ import Combine
 import Foundation
 import ServiceManagement
 import SwiftUI
+import WeatherKit
 
 struct WallpaperPreviewPresentation: Equatable, Sendable {
     enum State: Equatable, Sendable {
@@ -155,6 +156,7 @@ final class AppModel: ObservableObject {
     }
 
     private lazy var locationReader = LocationReader()
+    private let appleWeatherProvider = AppleWeatherProvider()
     private let weatherProvider = WeatherContextProvider()
     private var imageGeneration = ImageGenerationService()
     private var scheduler: Task<Void, Never>?
@@ -180,6 +182,7 @@ final class AppModel: ObservableObject {
     private var hourlyServices: AppModelHourlyServices?
     private var imageLedger = ImageGenerationLedger()
     private var applicationRetry: SavedWallpaperApplication?
+    private var savedDesktopAtLaunch: URL?
     private var visibleFailureIsApplication = false
     private var allowsHourlyPipeline: Bool { !isDesignPreview || hourlyServices != nil }
     private var pipelineNow: Date { hourlyServices?.now() ?? .now }
@@ -316,7 +319,9 @@ final class AppModel: ObservableObject {
         if let path = UserDefaults.standard.string(forKey: "displayedImagePath"),
            ImageStore.owns(path),
            FileManager.default.fileExists(atPath: path) {
-            displayedImageURL = URL(fileURLWithPath: path)
+            let saved = URL(fileURLWithPath: path)
+            displayedImageURL = saved
+            savedDesktopAtLaunch = saved
         } else if let path = settings.sourcePath {
             displayedImageURL = URL(fileURLWithPath: path)
         }
@@ -376,6 +381,7 @@ final class AppModel: ObservableObject {
     }
 
     init(settings: CanvasSettings, hourlyServices: AppModelHourlyServices, nextScheduledCheck: Date? = nil,
+         savedDesktopAtLaunch: URL? = nil,
          imageGeneration: ImageGenerationService? = nil) {
         self.settings = CanvasSettings()
         self.hourlyServices = hourlyServices
@@ -392,7 +398,8 @@ final class AppModel: ObservableObject {
         imageLedger.clearInterruptedReservations()
         generatedToday = imageLedger.count(on: hourlyServices.now())
         hourCache = HourWallpaperCache(directory: hourlyServices.cacheDirectory)
-        if let path = settings.sourcePath { displayedImageURL = URL(fileURLWithPath: path) }
+        self.savedDesktopAtLaunch = savedDesktopAtLaunch
+        displayedImageURL = savedDesktopAtLaunch ?? settings.sourcePath.map { URL(fileURLWithPath: $0) }
         if hourlyServices.runsBackgroundTasks {
             precondition(hourlyServices.sleep != nil, "Injected background scheduling requires an injected sleep")
         }
@@ -430,6 +437,22 @@ final class AppModel: ObservableObject {
             recovery = nil
             status = "Image creation paused"
             detail = storageError
+        }
+    }
+
+    /// macOS may restore its own wallpaper at login before the next scheduled image is due.
+    func restoreSavedDesktopAtLaunch() {
+        guard onboardingComplete, settings.automaticUpdates, !isPreparingForAppUpdate,
+              let savedDesktopAtLaunch, displayedImageURL == savedDesktopAtLaunch,
+              sourceAvailable(savedDesktopAtLaunch.path) else { return }
+        do {
+            if let hourlyServices { try hourlyServices.apply(savedDesktopAtLaunch) }
+            else if !WallpaperController.isApplied(savedDesktopAtLaunch) { try WallpaperController.apply(savedDesktopAtLaunch) }
+        } catch {
+            activity = .failed
+            recovery = .retry
+            status = "Could not restore your wallpaper"
+            detail = error.localizedDescription
         }
     }
 
@@ -849,11 +872,14 @@ final class AppModel: ObservableObject {
               !isPreparingForAppUpdate, let sourceImageURL else { return nil }
         let hour = selectedPreviewHour ?? Calendar.current.component(.hour, from: pipelineNow)
         let isNow = hour == Calendar.current.component(.hour, from: pipelineNow)
-        let savedWeather = currentSavedWallpaperEntry.flatMap { $0.hour == hour ? $0.weather.label : nil }
-        let weather = previewForecasts[hour]?.label ?? (isNow ? workspaceWeather?.label : nil)
-            ?? savedWeather ?? "local weather unavailable"
+        let savedWeather = currentSavedWallpaperEntry.flatMap { $0.hour == hour ? $0.weather : nil }
+        let weather = previewForecasts[hour] ?? (isNow ? workspaceWeather : nil)
+            ?? savedWeather
         let idea = pendingPromptDraftText ?? settings.promptTemplate
-        let instructions = PromptRenderer.renderHour(idea, date: hourDate(hour), weather: weather, style: settings.style, appearance: settings.systemAppearance)
+        let instructions = weather.map {
+            PromptRenderer.renderHour(idea, date: hourDate(hour), weather: $0, style: settings.style, appearance: settings.systemAppearance)
+        } ?? PromptRenderer.renderHour(idea, date: hourDate(hour), weather: "local weather unavailable",
+                                       style: settings.style, appearance: settings.systemAppearance)
         return CodexHandoff.Request(sourceURL: sourceImageURL, instructions: instructions)
     }
 
@@ -959,8 +985,11 @@ final class AppModel: ObservableObject {
         return nil
     }
 
+    var appleWeatherAttribution: WeatherAttribution? { appleWeatherProvider.attribution }
+    var isShowingAppleWeather: Bool { workspaceWeather?.source == .apple || previewWeather?.source == .apple }
+
     var menuWeatherStatus: String {
-        let title = settings.weatherChoice == .automatic ? "Weather now" : "Fixed weather"
+        let title = settings.weatherChoice == .automatic ? "Forecast this hour" : "Fixed weather"
         return "\(title) · \(workspaceWeather?.label.capitalized ?? "Unavailable")"
     }
 
@@ -2061,7 +2090,8 @@ final class AppModel: ObservableObject {
                                 draft: generationQueue.pending.first(where: matchesTarget)?.renderProfile == .quickPreview)
         }
         if isStale, resultURL != nil {
-            let reason = dirtyPrompt ? "Idea changed" : (match?.usesOldRecipe == true ? "Made with your previous idea" : "Made on an earlier day")
+            let reason = dirtyPrompt ? "Idea changed" : (match?.usesOldRecipe == true ? "Made with your previous idea"
+                : match?.weatherChanged == true ? "Weather forecast changed" : "Made on an earlier day")
             return presentation(.stale, "\(isDraft ? "Preview" : "Wallpaper") for \(hourLabel(hour))", reason)
         }
         // Now may show the actual desktop without a current-hour cache entry. A selected
@@ -2329,8 +2359,8 @@ final class AppModel: ObservableObject {
             previewForecasts[hour] = weather
             if selectedPreviewHour == hour { previewWeather = weather }
             let cached = cachedImage(settings: snapshot, recipeID: recipe, hour: hour,
-                                     weather: weather.label, renderProfile: renderProfile)
-            let id = HourWallpaperCache.jobID(recipeID: recipe, hour: hour, weather: weather.label, renderProfile: renderProfile)
+                                     weather: weather.cacheKey, renderProfile: renderProfile)
+            let id = HourWallpaperCache.jobID(recipeID: recipe, hour: hour, weather: weather.cacheKey, renderProfile: renderProfile)
             let preparedPriority: HourlyGenerationJob.Priority = request.intent.contains(.automaticWallpaper) ? .automatic : .manual
             if !request.intent.intersection([.automaticWallpaper, .manualWallpaper]).isEmpty {
                 desktopIntentRevisions[id] = request.desktopRevision
@@ -2443,7 +2473,7 @@ final class AppModel: ObservableObject {
             latestIntent: { [unowned self] job in generationQueue.current.map { job.merged(with: $0) } ?? job },
             cached: { [unowned self] job in
                 cachedImage(settings: job.settings, recipeID: job.recipeID, hour: job.hour,
-                            weather: job.weather.label, renderProfile: job.renderProfile)?.url
+                            weather: job.weather.cacheKey, renderProfile: job.renderProfile)?.url
             },
             readPrompt: { [unowned self] job in
                 if let readPrompt = hourlyServices?.readPrompt { return try await readPrompt(job) }
@@ -2519,7 +2549,7 @@ final class AppModel: ObservableObject {
                 if job.renderProfile == .wallpaper, job.intent == .preview,
                    let selected = selectedSavedWallpaper, requestedFullPreviewSelectionIDs[job.recipeID] == selected.id,
                    let entry = hourCache?.exact(pictureID: HourWallpaperCache.pictureID(for: job.settings), recipeID: job.recipeID,
-                                                hour: job.hour, weather: job.weather.label)?.entry,
+                                                hour: job.hour, weather: job.weather.cacheKey)?.entry,
                    let url = hourCache?.url(for: entry) {
                     selectedSavedWallpaper = SavedWallpaperItem(entry: entry, url: url)
                     selectedSavedWallpaperPrompt = entry.settingsSnapshot?.promptTemplate
@@ -2717,7 +2747,7 @@ final class AppModel: ObservableObject {
         }
         try validateSourceReading(job)
         let redacted = LocalPromptFileDetector.redactingPaths(in: job.settings.promptTemplate)
-        return PromptRenderer.renderHour(redacted, date: job.date, weather: job.weather.label, style: job.settings.style, appearance: job.settings.systemAppearance)
+        return PromptRenderer.renderHour(redacted, date: job.date, weather: job.weather, style: job.settings.style, appearance: job.settings.systemAppearance)
             + (blocks.isEmpty ? "" : "\n\n" + blocks.joined(separator: "\n\n"))
     }
 
@@ -2782,7 +2812,7 @@ final class AppModel: ObservableObject {
     private func cachedPreview(hour: Int) -> HourWallpaperCache.Match? {
         let forecast = isDesignPreview ? nil : cachedForecast(at: hourDate(hour))
         let snapshot = previewSettings
-        let weather = snapshot.weatherChoice == .automatic ? (forecast ?? previewForecasts[hour])?.label
+        let weather = snapshot.weatherChoice == .automatic ? (forecast ?? previewForecasts[hour])?.cacheKey
             : snapshot.weatherChoice.rawValue
         let match = hourCache?.preview(pictureID: HourWallpaperCache.pictureID(for: snapshot),
                                   recipeID: HourWallpaperCache.recipeID(for: snapshot, date: pipelineNow), hour: hour, weather: weather,
@@ -2871,7 +2901,8 @@ final class AppModel: ObservableObject {
 
     private func cachedForecast(at date: Date) -> WeatherSnapshot? {
         guard let location = try? settings.weatherLocation.resolve(current: settings.weatherLocation == .current ? locationReader.freshLocation : nil) else { return nil }
-        return weatherProvider.cachedWeather(at: date, location: location)
+        return appleWeatherProvider.cachedWeather(at: date, location: location)
+            ?? weatherProvider.cachedWeather(at: date, location: location)
     }
 
     private func weatherSnapshot(settings snapshotSettings: CanvasSettings, date: Date) async throws -> WeatherSnapshot {
@@ -2886,7 +2917,12 @@ final class AppModel: ObservableObject {
             throw WeatherContextError.waitingForLocation
         }
         let location = try snapshotSettings.weatherLocation.resolve(current: snapshotSettings.weatherLocation == .current ? locationReader.freshLocation : nil)
-        let snapshot = try await weatherProvider.weather(at: date, location: location)
+        let snapshot: WeatherSnapshot
+        do { snapshot = try await appleWeatherProvider.weather(at: date, location: location) }
+        catch {
+            try Task.checkCancellation()
+            snapshot = try await weatherProvider.weather(at: date, location: location)
+        }
         if snapshotSettings.weatherLocation == settings.weatherLocation && Calendar.current.isDate(date, equalTo: pipelineNow, toGranularity: .hour) { latestWeather = snapshot; currentLocalWeather = snapshot }
         return snapshot
     }

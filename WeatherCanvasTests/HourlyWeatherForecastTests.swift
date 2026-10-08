@@ -5,6 +5,56 @@ import XCTest
 @testable import Daydreaming
 
 final class HourlyWeatherForecastTests: XCTestCase {
+    @MainActor
+    func testAppleWeatherUsesLocalizedDescriptionAndRichPromptContextWithoutRefetching() async throws {
+        let now = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-10-05T10:25:00Z"))
+        let later = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-10-05T17:00:00Z"))
+        let current = WeatherSnapshot(label: "Gedeeltelijk bewolkt", symbol: "cloud.sun", fetchedAt: now,
+                                      details: appleDetails(cloudCover: 44, precipitationType: nil), source: .apple)
+        let future = WeatherSnapshot(label: "Lichte regen", symbol: "cloud.rain", fetchedAt: now,
+                                     details: appleDetails(cloudCover: 90, precipitationType: "Regen"), source: .apple)
+        let spy = AppleWeatherReportSpy(report: AppleWeatherReport(current: current,
+            hourly: [HourlyWeatherForecast(date: later, weather: future)]))
+        let provider = AppleWeatherProvider { _, _ in await spy.fetch() }
+        let location = CLLocation(latitude: 51.22, longitude: 4.40)
+
+        let present = try await provider.weather(at: now, location: location, now: now)
+        let predicted = try await provider.weather(at: later, location: location, now: now)
+        XCTAssertEqual(present.label, "Gedeeltelijk bewolkt")
+        XCTAssertEqual(predicted.label, "Lichte regen")
+        XCTAssertNotEqual(present.cacheKey, WeatherSnapshot(label: present.label, symbol: present.symbol, fetchedAt: now).cacheKey)
+        XCTAssertNotEqual(present.cacheKey, WeatherSnapshot(label: present.label, symbol: present.symbol, fetchedAt: now,
+                                                            details: appleDetails(cloudCover: 90), source: .apple).cacheKey)
+        let prompt = PromptRenderer.renderHour(CanvasSettings.defaultPrompt, date: now, weather: present)
+        XCTAssertTrue(prompt.contains("Gedeeltelijk bewolkt"))
+        XCTAssertTrue(prompt.contains("cloud cover 44%"))
+        XCTAssertTrue(prompt.contains("wind 18 km/h"))
+        XCTAssertTrue(prompt.contains("temperature 14°C"))
+        XCTAssertFalse(prompt.contains("precipitation type"))
+        let calls = await spy.calls
+        XCTAssertEqual(calls, 1)
+    }
+
+    @MainActor
+    func testAppleWeatherFailureBacksOffPerLocation() async throws {
+        let now = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-10-05T10:25:00Z"))
+        let spy = AppleWeatherFailureSpy()
+        let provider = AppleWeatherProvider { _, _ in try await spy.fetch() }
+        let antwerp = CLLocation(latitude: 51.22, longitude: 4.40)
+        let ghent = CLLocation(latitude: 51.05, longitude: 3.72)
+
+        for location in [antwerp, antwerp, ghent] {
+            do {
+                _ = try await provider.weather(at: now, location: location, now: now)
+                XCTFail("Expected Apple Weather to fail")
+            } catch {
+                XCTAssertNil(provider.cachedWeather(at: now, now: now, location: location))
+            }
+        }
+        let calls = await spy.calls
+        XCTAssertEqual(calls, 2)
+    }
+
     func testFutureHourTodayUsesMatchingForecastRatherThanCurrentWeather() throws {
         let calendar = utcCalendar()
         let now = try date(day: 5, hour: 10, minute: 25, calendar: calendar)
@@ -68,6 +118,31 @@ final class HourlyWeatherForecastTests: XCTestCase {
         XCTAssertEqual(WeatherContextProvider.label(for: "cloudy"), "cloudy")
         XCTAssertEqual(WeatherContextProvider.label(for: "lightrainshowers_day"), "rainy")
         XCTAssertEqual(WeatherContextProvider.label(for: "snowshowers_night"), "snowy")
+    }
+
+    @MainActor
+    func testLightShowersUseCloudCoverWhileHeavyRainAndThunderRemainRainy() async throws {
+        let data = Data("""
+        {"properties":{"timeseries":[
+          {"time":"2026-10-08T07:00:00Z","data":{"instant":{"details":{"cloud_area_fraction":10.2}},"next_1_hours":{"summary":{"symbol_code":"rainshowers_day"},"details":{"precipitation_amount":0.3}}}},
+          {"time":"2026-10-08T08:00:00Z","data":{"instant":{"details":{"cloud_area_fraction":69.5}},"next_1_hours":{"summary":{"symbol_code":"lightrainshowers_day"},"details":{"precipitation_amount":0.1}}}},
+          {"time":"2026-10-08T09:00:00Z","data":{"instant":{"details":{"cloud_area_fraction":10.2}},"next_1_hours":{"summary":{"symbol_code":"rainshowers_day"},"details":{"precipitation_amount":2.0}}}},
+          {"time":"2026-10-08T10:00:00Z","data":{"instant":{"details":{"cloud_area_fraction":10.2}},"next_1_hours":{"summary":{"symbol_code":"rainshowersandthunder_day"},"details":{"precipitation_amount":0.1}}}}
+        ]}}
+        """.utf8)
+        let provider = WeatherContextProvider { request in
+            (data, HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!)
+        }
+        let now = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-10-08T07:30:00Z"))
+        let location = CLLocation(latitude: 51.22, longitude: 4.40)
+
+        let current = try await provider.weather(at: now, location: location, now: now)
+        XCTAssertEqual(current.label, "mostly clear")
+        for (hour, expected) in [(8, "partly cloudy"), (9, "rainy"), (10, "stormy")] {
+            let date = try XCTUnwrap(ISO8601DateFormatter().date(from: String(format: "2026-10-08T%02d:00:00Z", hour)))
+            let predicted = try await provider.weather(at: date, location: location, now: now)
+            XCTAssertEqual(predicted.label, expected)
+        }
     }
 
     func testLocationMustBeRecentAndHaveValidAccuracy() {
@@ -162,15 +237,15 @@ final class HourlyWeatherForecastTests: XCTestCase {
     func testFixedLocationSeparatesCacheKeysAndCurrentLocationKeepsLegacyKey() {
         var settings = CanvasSettings()
         settings.sourceDigest = "fixture-picture"
-        let legacyKey = "fa2153885fdb6ba71993daf2388e42be63ad9c3b5a049685da037eb57c639e44"
-        XCTAssertEqual(HourWallpaperCache.recipeID(for: settings), legacyKey)
+        let legacyDigest = "fa2153885fdb6ba71993daf2388e42be63ad9c3b5a049685da037eb57c639e44"
+        XCTAssertEqual(HourWallpaperCache.recipeID(for: settings), legacyDigest)
         settings.weatherLocation = .fixed(WeatherPlace(name: "First place", latitude: 40, longitude: -70))
         let first = HourWallpaperCache.recipeID(for: settings)
-        XCTAssertNotEqual(first, legacyKey)
+        XCTAssertNotEqual(first, legacyDigest)
         settings.weatherLocation = .fixed(WeatherPlace(name: "Second place", latitude: 45, longitude: -75))
         XCTAssertNotEqual(HourWallpaperCache.recipeID(for: settings), first)
         settings.weatherLocation = .current
-        XCTAssertEqual(HourWallpaperCache.recipeID(for: settings), legacyKey)
+        XCTAssertEqual(HourWallpaperCache.recipeID(for: settings), legacyDigest)
     }
 
     func testPhotoGPSHandlesHemispheresAndRejectsMissingOrInvalidCoordinates() throws {
@@ -215,6 +290,31 @@ final class HourlyWeatherForecastTests: XCTestCase {
 
     private func snapshot(_ label: String, at date: Date) -> WeatherSnapshot {
         WeatherSnapshot(label: label, symbol: "cloud", fetchedAt: date)
+    }
+
+    private func appleDetails(cloudCover: Int, precipitationType: String? = "Geen neerslag") -> WeatherVisualDetails {
+        WeatherVisualDetails(temperatureCelsius: 14, apparentTemperatureCelsius: 12, dewPointCelsius: 9,
+            cloudCoverPercent: cloudCover, lowCloudPercent: 20, mediumCloudPercent: 18, highCloudPercent: 6,
+            humidityPercent: 68, precipitationType: precipitationType, precipitationChancePercent: 10,
+            precipitationAmountMillimeters: 0, precipitationIntensityMillimetersPerHour: nil,
+            windSpeedKilometersPerHour: 18, windGustKilometersPerHour: 28, windDirection: "noordwest",
+            visibilityKilometers: 12, pressureMillibars: 1016, pressureTrend: "stijgend", uvIndex: 2,
+            isDaylight: true)
+    }
+}
+
+private actor AppleWeatherReportSpy {
+    let report: AppleWeatherReport
+    private(set) var calls = 0
+    init(report: AppleWeatherReport) { self.report = report }
+    func fetch() -> AppleWeatherReport { calls += 1; return report }
+}
+
+private actor AppleWeatherFailureSpy {
+    private(set) var calls = 0
+    func fetch() throws -> AppleWeatherReport {
+        calls += 1
+        throw URLError(.notConnectedToInternet)
     }
 }
 

@@ -234,7 +234,7 @@ struct OnboardingView: View {
     private var locationStatus: some View {
         switch model.onboardingLocationState {
         case .notRequested:
-            Text("Allow location access for local weather. Rounded coordinates go to MET Norway.")
+            Text("Allow location access for local weather. Apple Weather uses your approximate location, with MET Norway as a fallback.")
                 .font(.body).foregroundStyle(.secondary)
         case .requesting:
             ProgressView("Waiting for location access…").controlSize(.small)

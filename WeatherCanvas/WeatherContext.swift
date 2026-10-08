@@ -1,6 +1,7 @@
 import CoreLocation
 import Foundation
 import MapKit
+import WeatherKit
 
 enum OnboardingLocationPolicy {
     static func updated(_ state: OnboardingLocationState, authorization: CLAuthorizationStatus) -> OnboardingLocationState {
@@ -127,6 +128,139 @@ enum WeatherContextError: LocalizedError {
     }
 }
 
+struct AppleWeatherReport: Sendable {
+    let current: WeatherSnapshot
+    let hourly: [HourlyWeatherForecast]
+    let attribution: WeatherAttribution?
+
+    init(current: WeatherSnapshot, hourly: [HourlyWeatherForecast], attribution: WeatherAttribution? = nil) {
+        self.current = current
+        self.hourly = hourly
+        self.attribution = attribution
+    }
+}
+
+@MainActor
+final class AppleWeatherProvider {
+    typealias Fetch = @Sendable (CLLocation, Date) async throws -> AppleWeatherReport
+
+    private let fetch: Fetch
+    private var report: AppleWeatherReport?
+    private(set) var attribution: WeatherAttribution?
+    private var cachedCoordinates: String?
+    private var nextFetchAt = Date.distantPast
+    private var retryAfter = Date.distantPast
+
+    init(fetch: @escaping Fetch = { location, now in
+        let (current, forecast) = try await WeatherService.shared.weather(for: location, including: .current, .hourly)
+        let currentSnapshot = WeatherSnapshot(label: current.condition.description, symbol: current.symbolName,
+                                              fetchedAt: now, details: WeatherVisualDetails(current: current), source: .apple)
+        let hours = forecast.map { hour in
+            HourlyWeatherForecast(date: hour.date,
+                weather: WeatherSnapshot(label: hour.condition.description, symbol: hour.symbolName, fetchedAt: now,
+                                         details: WeatherVisualDetails(hour: hour), source: .apple))
+        }
+        let attribution = try await WeatherService.shared.attribution
+        return AppleWeatherReport(current: currentSnapshot, hourly: hours, attribution: attribution)
+    }) {
+        self.fetch = fetch
+    }
+
+    func cachedWeather(at date: Date, now: Date = .now, location: CLLocation? = nil) -> WeatherSnapshot? {
+        if let location, cachedCoordinates != Self.coordinates(for: location) { return nil }
+        guard let report, now < nextFetchAt else { return nil }
+        return HourlyWeatherForecast.select(date: date, now: now, current: report.current, forecast: report.hourly)
+    }
+
+    func weather(at date: Date, location: CLLocation, now: Date = .now) async throws -> WeatherSnapshot {
+        let coordinates = Self.coordinates(for: location)
+        if coordinates != cachedCoordinates {
+            report = nil
+            attribution = nil
+            cachedCoordinates = coordinates
+            nextFetchAt = .distantPast
+            retryAfter = .distantPast
+        }
+        if now >= nextFetchAt || report == nil {
+            if report == nil && now < retryAfter { throw WeatherContextError.forecastUnavailable }
+            do {
+                report = try await fetch(location, now)
+                attribution = report?.attribution
+                cachedCoordinates = coordinates
+                nextFetchAt = min(now.addingTimeInterval(900), Calendar.current.dateInterval(of: .hour, for: now)?.end ?? .distantFuture)
+                retryAfter = .distantPast
+            } catch {
+                retryAfter = now.addingTimeInterval(300)
+                guard coordinates == cachedCoordinates, let report,
+                      Calendar.current.isDate(report.current.fetchedAt, equalTo: now, toGranularity: .hour),
+                      now.timeIntervalSince(report.current.fetchedAt) < 7_200 else { throw error }
+                nextFetchAt = now.addingTimeInterval(300)
+                return HourlyWeatherForecast.select(date: date, now: now, current: report.current, forecast: report.hourly)
+            }
+        }
+        guard let report else { throw WeatherContextError.forecastUnavailable }
+        return HourlyWeatherForecast.select(date: date, now: now, current: report.current, forecast: report.hourly)
+    }
+
+    private nonisolated static func coordinates(for location: CLLocation) -> String {
+        String(format: "%.2f,%.2f", locale: Locale(identifier: "en_US_POSIX"),
+               location.coordinate.latitude, location.coordinate.longitude)
+    }
+}
+
+private extension WeatherVisualDetails {
+    init(current: CurrentWeather) {
+        self.init(temperatureCelsius: Self.celsius(current.temperature),
+                  apparentTemperatureCelsius: Self.celsius(current.apparentTemperature),
+                  dewPointCelsius: Self.celsius(current.dewPoint),
+                  cloudCoverPercent: Self.percent(current.cloudCover),
+                  lowCloudPercent: Self.percent(current.cloudCoverByAltitude.low),
+                  mediumCloudPercent: Self.percent(current.cloudCoverByAltitude.medium),
+                  highCloudPercent: Self.percent(current.cloudCoverByAltitude.high),
+                  humidityPercent: Self.percent(current.humidity),
+                  precipitationType: nil,
+                  precipitationChancePercent: nil, precipitationAmountMillimeters: nil,
+                  precipitationIntensityMillimetersPerHour: current.precipitationIntensity.converted(to: .metersPerSecond).value * 3_600_000,
+                  windSpeedKilometersPerHour: Self.speed(current.wind.speed),
+                  windGustKilometersPerHour: current.wind.gust.map(Self.speed),
+                  windDirection: current.wind.compassDirection.description,
+                  visibilityKilometers: current.visibility.converted(to: .kilometers).value,
+                  pressureMillibars: Int(current.pressure.converted(to: .millibars).value.rounded()),
+                  pressureTrend: current.pressureTrend.description,
+                  uvIndex: current.uvIndex.value, isDaylight: current.isDaylight)
+    }
+
+    init(hour: HourWeather) {
+        self.init(temperatureCelsius: Self.celsius(hour.temperature),
+                  apparentTemperatureCelsius: Self.celsius(hour.apparentTemperature),
+                  dewPointCelsius: Self.celsius(hour.dewPoint),
+                  cloudCoverPercent: Self.percent(hour.cloudCover),
+                  lowCloudPercent: Self.percent(hour.cloudCoverByAltitude.low),
+                  mediumCloudPercent: Self.percent(hour.cloudCoverByAltitude.medium),
+                  highCloudPercent: Self.percent(hour.cloudCoverByAltitude.high),
+                  humidityPercent: Self.percent(hour.humidity),
+                  precipitationType: hour.precipitation.description,
+                  precipitationChancePercent: Self.percent(hour.precipitationChance),
+                  precipitationAmountMillimeters: hour.precipitationAmount.converted(to: .millimeters).value,
+                  precipitationIntensityMillimetersPerHour: nil,
+                  windSpeedKilometersPerHour: Self.speed(hour.wind.speed),
+                  windGustKilometersPerHour: hour.wind.gust.map(Self.speed),
+                  windDirection: hour.wind.compassDirection.description,
+                  visibilityKilometers: hour.visibility.converted(to: .kilometers).value,
+                  pressureMillibars: Int(hour.pressure.converted(to: .millibars).value.rounded()),
+                  pressureTrend: hour.pressureTrend.description,
+                  uvIndex: hour.uvIndex.value, isDaylight: hour.isDaylight)
+    }
+
+    static func celsius(_ value: Measurement<UnitTemperature>) -> Int { Int(value.converted(to: .celsius).value.rounded()) }
+    static func speed(_ value: Measurement<UnitSpeed>) -> Int { Int(value.converted(to: .kilometersPerHour).value.rounded()) }
+    static func percent(_ value: Double) -> Int { Int((value * 100).rounded()).clamped(to: 0...100) }
+}
+
+private extension Int {
+    func clamped(to range: ClosedRange<Int>) -> Int { Swift.min(range.upperBound, Swift.max(range.lowerBound, self)) }
+}
+
 @MainActor
 final class WeatherContextProvider {
     private var cachedSnapshot: WeatherSnapshot?
@@ -202,15 +336,16 @@ final class WeatherContextProvider {
         }
         guard (200..<300).contains(response.statusCode),
               let forecast = try? JSONDecoder().decode(ForecastResponse.self, from: data),
-              let symbolCode = forecast.properties.timeseries.first?.data.nextHour?.summary.symbolCode else {
+              let first = forecast.properties.timeseries.first,
+              first.data.nextHour?.summary.symbolCode != nil else {
             throw WeatherContextError.forecastUnavailable
         }
 
-        let label = Self.label(for: symbolCode)
+        let label = Self.label(for: first)
         let snapshot = WeatherSnapshot(label: label, symbol: Self.symbol(for: label), fetchedAt: now)
         hourlyForecast = forecast.properties.timeseries.compactMap { step in
-            guard let date = ISO8601DateFormatter().date(from: step.time), let code = step.data.nextHour?.summary.symbolCode else { return nil }
-            let label = Self.label(for: code)
+            guard let date = ISO8601DateFormatter().date(from: step.time), step.data.nextHour?.summary.symbolCode != nil else { return nil }
+            let label = Self.label(for: step)
             return HourlyWeatherForecast(date: date, weather: WeatherSnapshot(label: label, symbol: Self.symbol(for: label), fetchedAt: now))
         }
         cachedSnapshot = snapshot
@@ -234,6 +369,19 @@ final class WeatherContextProvider {
         if code.hasPrefix("partlycloudy") { return "partly cloudy" }
         if code.contains("cloud") { return "cloudy" }
         return "clear"
+    }
+
+    private nonisolated static func label(for step: ForecastResponse.Properties.TimeStep) -> String {
+        guard let period = step.data.nextHour else { return "clear" }
+        let code = period.summary.symbolCode.lowercased()
+        if code.contains("rainshowers"), !code.contains("thunder"),
+           let amount = period.details?.precipitationAmount, (0..<0.5).contains(amount),
+           let cloudCover = step.data.instant?.details.cloudAreaFraction, (0...100).contains(cloudCover) {
+            if cloudCover < 25 { return "mostly clear" }
+            if cloudCover < 75 { return "partly cloudy" }
+            return "cloudy"
+        }
+        return label(for: code)
     }
 
     nonisolated private static func symbol(for label: String) -> String {
@@ -276,15 +424,28 @@ private struct ForecastResponse: Decodable {
     struct Properties: Decodable {
         struct TimeStep: Decodable {
             struct DataPoint: Decodable {
+                struct Instant: Decodable {
+                    struct Details: Decodable {
+                        let cloudAreaFraction: Double?
+                        enum CodingKeys: String, CodingKey { case cloudAreaFraction = "cloud_area_fraction" }
+                    }
+                    let details: Details
+                }
                 struct Period: Decodable {
                     struct Summary: Decodable {
                         let symbolCode: String
                         enum CodingKeys: String, CodingKey { case symbolCode = "symbol_code" }
                     }
+                    struct Details: Decodable {
+                        let precipitationAmount: Double?
+                        enum CodingKeys: String, CodingKey { case precipitationAmount = "precipitation_amount" }
+                    }
                     let summary: Summary
+                    let details: Details?
                 }
+                let instant: Instant?
                 let nextHour: Period?
-                enum CodingKeys: String, CodingKey { case nextHour = "next_1_hours" }
+                enum CodingKeys: String, CodingKey { case instant, nextHour = "next_1_hours" }
             }
             let time: String
             let data: DataPoint
@@ -324,7 +485,7 @@ enum WeatherPlaceLookup {
     }
 
     static func named(_ place: WeatherPlace) async -> WeatherPlace {
-        // Resolve only the same rounded coordinates sent to the weather service.
+        // Resolve the same approximate place used for the saved fixed location.
         let location = CLLocation(latitude: (place.latitude * 100).rounded() / 100,
                                   longitude: (place.longitude * 100).rounded() / 100)
         guard let request = MKReverseGeocodingRequest(location: location),

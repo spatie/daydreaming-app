@@ -15,7 +15,7 @@ struct CustomizeView: View {
                     }
                 }
                 LabeledContent("Weather", value: "Local weather")
-                    .help("Uses your approximate location to fetch the local forecast from MET Norway.")
+                    .help("Uses Apple Weather for your location, with MET Norway as a fallback.")
             }
             .formStyle(.grouped)
             Text("Links and files in your instructions are read before each new wallpaper and their text is sent to \(model.imageProviderName).")

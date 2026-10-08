@@ -14,6 +14,7 @@ from sparkle_tools import public_key
 IDENTITY = "Developer ID Application: Spatie (97KRXCRMAY)"
 REQUIRED = ("APPLE_CERTIFICATE_P12", "APPLE_CERTIFICATE_PASSWORD", "APPLE_API_KEY_P8",
             "APPLE_API_KEY_ID", "APPLE_API_ISSUER_ID", "DAYDREAMING_SPARKLE_PRIVATE_KEY",
+            "DAYDREAMING_WEATHERKIT_PROFILE",
             "DAYDREAMING_S3_ACCESS_KEY_ID", "DAYDREAMING_S3_SECRET_ACCESS_KEY",
             "DAYDREAMING_S3_ENDPOINT", "DAYDREAMING_S3_REGION", "DAYDREAMING_S3_BUCKET",
             "DAYDREAMING_S3_PREFIX", "DAYDREAMING_OBJECT_BASE_URL", "DAYDREAMING_RELEASE_TOKEN")
@@ -61,7 +62,8 @@ def cleanup():
         if result.returncode and keychain.exists():
             errors.append("Unable to delete temporary signing keychain")
         state.unlink()
-    for name in ("daydreaming-cert.p12", "daydreaming-notary.p8", "daydreaming-sparkle.key"):
+    for name in ("daydreaming-cert.p12", "daydreaming-notary.p8", "daydreaming-sparkle.key",
+                 "daydreaming-weatherkit.provisionprofile"):
         (root / name).unlink(missing_ok=True)
     if errors:
         raise ValueError("; ".join(errors))
@@ -99,6 +101,8 @@ def setup():
     notary.unlink()
     key = root / "daydreaming-sparkle.key"
     key.write_text(os.environ["DAYDREAMING_SPARKLE_PRIVATE_KEY"].strip())
+    profile = root / "daydreaming-weatherkit.provisionprofile"
+    profile.write_bytes(base64.b64decode(os.environ["DAYDREAMING_WEATHERKIT_PROFILE"], validate=True))
     project = (Path(__file__).resolve().parents[2] / "project.yml").read_text()
     expected_key = re.search(r'DAYDREAMING_SPARKLE_PUBLIC_KEY:\s*"([A-Za-z0-9+/=]+)"', project).group(1)
     if public_key(key) != expected_key:

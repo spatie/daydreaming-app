@@ -25,6 +25,7 @@ struct HourWallpaperCache: Sendable {
         let url: URL
         let usesOldRecipe: Bool
         let needsUpdate: Bool
+        let weatherChanged: Bool
     }
 
     let directory: URL
@@ -89,23 +90,32 @@ struct HourWallpaperCache: Sendable {
         entries.reversed().first {
             $0.pictureID == pictureID && $0.recipeID == recipeID && $0.hour == hour
                 && $0.renderProfile == renderProfile
-                && (weather == nil || $0.weather.label == weather) && validURL(for: $0) != nil
+                && (weather == nil || $0.weather.cacheKey == weather) && validURL(for: $0) != nil
         }.flatMap { entry in
-            validURL(for: entry).map { Match(entry: entry, url: $0, usesOldRecipe: false, needsUpdate: false) }
+            validURL(for: entry).map { Match(entry: entry, url: $0, usesOldRecipe: false, needsUpdate: false, weatherChanged: false) }
         }
     }
 
     func preview(pictureID: String, recipeID: String, hour: Int, weather: String?, promptRecipeID: String? = nil) -> Match? {
         if let exact = exact(pictureID: pictureID, recipeID: recipeID, hour: hour, weather: weather) { return exact }
         if let quick = exact(pictureID: pictureID, recipeID: recipeID, hour: hour, weather: weather, renderProfile: .quickPreview) { return quick }
+        let sameRecipe = entries.reversed().filter {
+            $0.pictureID == pictureID && $0.recipeID == recipeID && $0.hour == hour && validURL(for: $0) != nil
+        }
+        let matchingRecipe = sameRecipe.filter { $0.renderProfile == .wallpaper }
+            + sameRecipe.filter { $0.renderProfile == .quickPreview }
+        if let entry = matchingRecipe.first, let url = validURL(for: entry) {
+            return Match(entry: entry, url: url, usesOldRecipe: false, needsUpdate: true, weatherChanged: true)
+        }
         let candidates = entries.reversed().filter {
             $0.pictureID == pictureID && $0.hour == hour && $0.recipeID != recipeID && validURL(for: $0) != nil
         }
         let preferred = candidates.filter { $0.renderProfile == .wallpaper } + candidates.filter { $0.renderProfile == .quickPreview }
-        let entry = preferred.first { weather == nil || $0.weather.label == weather } ?? preferred.first
+        let entry = preferred.first { weather == nil || $0.weather.cacheKey == weather } ?? preferred.first
         guard let entry, let url = validURL(for: entry) else { return nil }
         let samePrompt = promptRecipeID != nil && entry.promptRecipeID == promptRecipeID
-        return Match(entry: entry, url: url, usesOldRecipe: !samePrompt, needsUpdate: true)
+        return Match(entry: entry, url: url, usesOldRecipe: !samePrompt, needsUpdate: true,
+                     weatherChanged: weather != nil && entry.weather.cacheKey != weather)
     }
 
     mutating func record(pictureID: String, recipeID: String, hour: Int, weather: WeatherSnapshot,

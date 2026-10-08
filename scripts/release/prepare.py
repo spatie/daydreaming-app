@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timezone
 from feed import FEED_URL, DOWNLOAD_PREFIX, require_next_build, validate
 from sparkle_tools import ACCOUNT, VERSION, SHA256, fetch, signing_arguments, public_key as public_key_from_file
 from dmg import build as build_dmg
@@ -43,7 +44,31 @@ def verify_signature(path: Path):
         raise ValueError(f"Incorrect Developer ID team or missing hardened runtime: {path.name}")
 
 
-def validate_app(app: Path, version: str, build: int, revision: str) -> str:
+def weatherkit_profile(path: Path) -> dict:
+    if not path.is_file():
+        raise ValueError("WeatherKit Developer ID provisioning profile is missing")
+    result = subprocess.run(["security", "cms", "-D", "-i", str(path)],
+                            check=True, capture_output=True)
+    profile = plistlib.loads(result.stdout)
+    entitlements = profile.get("Entitlements", {})
+    app_id = entitlements.get("com.apple.application-identifier",
+                              entitlements.get("application-identifier"))
+    if (entitlements.get("com.apple.developer.weatherkit") is not True
+            or app_id != f"{TEAM}.{BUNDLE_ID}"
+            or TEAM not in profile.get("TeamIdentifier", [])):
+        raise ValueError("Provisioning profile does not authorize Daydreaming WeatherKit")
+    expiration = profile.get("ExpirationDate")
+    if not isinstance(expiration, datetime):
+        raise ValueError("WeatherKit provisioning profile has no expiration date")
+    expiration = expiration.replace(tzinfo=timezone.utc) if expiration.tzinfo is None else expiration.astimezone(timezone.utc)
+    if expiration <= datetime.now(timezone.utc):
+        raise ValueError("WeatherKit provisioning profile has expired")
+    if not profile.get("UUID") or not profile.get("Name"):
+        raise ValueError("WeatherKit provisioning profile is incomplete")
+    return profile
+
+
+def validate_app(app: Path, version: str, build: int, revision: str, profile_uuid: str) -> str:
     with (app / "Contents/Info.plist").open("rb") as file:
         info = plistlib.load(file)
     expected = {"CFBundleIdentifier": BUNDLE_ID, "CFBundleShortVersionString": version,
@@ -83,6 +108,11 @@ def validate_app(app: Path, version: str, build: int, revision: str) -> str:
         raise ValueError("App sandbox must remain enabled")
     if entitlements.get("com.apple.security.get-task-allow"):
         raise ValueError("Distribution app may not allow debugger access")
+    if entitlements.get("com.apple.developer.weatherkit") is not True:
+        raise ValueError("Distribution app must contain the WeatherKit entitlement")
+    embedded = weatherkit_profile(app / "Contents/embedded.provisionprofile")
+    if embedded["UUID"] != profile_uuid:
+        raise ValueError("Distribution app has the wrong WeatherKit provisioning profile")
     return key
 
 
@@ -97,6 +127,14 @@ def notarize(path: Path, profile: str, log: Path):
 def prepare(args):
     repo = Path(__file__).resolve().parents[2]
     revision = clean_revision(repo)
+    profile = weatherkit_profile(args.weatherkit_profile)
+    profile_uuid = profile["UUID"]
+    installed_profile = Path.home() / "Library/MobileDevice/Provisioning Profiles" / f"{profile_uuid}.provisionprofile"
+    installed_profile.parent.mkdir(parents=True, exist_ok=True)
+    if installed_profile.exists() and installed_profile.read_bytes() != args.weatherkit_profile.read_bytes():
+        raise ValueError("A different provisioning profile is installed under this UUID")
+    if not installed_profile.exists():
+        shutil.copy2(args.weatherkit_profile, installed_profile)
     signing = signing_arguments(args.sparkle_key_file)
     if args.sparkle_key_file and repo in args.sparkle_key_file.resolve().parents:
         raise ValueError("Private signing keys must stay outside the source tree")
@@ -138,15 +176,17 @@ def prepare(args):
             "-destination", "generic/platform=macOS", "ARCHS=arm64 x86_64", "ONLY_ACTIVE_ARCH=NO", "-disableAutomaticPackageResolution",
             "-onlyUsePackageVersionsFromResolvedFile", "archive", "DAYDREAMING_BUILD_CHANNEL=release",
             f"DAYDREAMING_SOURCE_REVISION={revision}", f"MARKETING_VERSION={args.version}",
-            f"CURRENT_PROJECT_VERSION={args.build}", f"CODE_SIGN_IDENTITY={args.identity}", cwd=source)
+            f"CURRENT_PROJECT_VERSION={args.build}", f"CODE_SIGN_IDENTITY={args.identity}",
+            f"PROVISIONING_PROFILE_SPECIFIER={profile['Name']}", cwd=source)
         export_options = work / "ExportOptions.plist"
         export_options.write_bytes(plistlib.dumps({"method": "developer-id", "teamID": TEAM,
-                                                  "signingStyle": "manual", "signingCertificate": args.identity}))
+                                                  "signingStyle": "manual", "signingCertificate": args.identity,
+                                                  "provisioningProfiles": {BUNDLE_ID: profile["Name"]}}))
         exported = work / "export"
         run("xcodebuild", "-exportArchive", "-archivePath", archive, "-exportPath", exported,
             "-exportOptionsPlist", export_options)
         app = exported / "Daydreaming.app"
-        public_key = validate_app(app, args.version, args.build, revision)
+        public_key = validate_app(app, args.version, args.build, revision, profile_uuid)
         signing_public_key = (public_key_from_file(args.sparkle_key_file) if args.sparkle_key_file
                               else run(tools / "generate_keys", "--account", ACCOUNT, "-p", capture=True))
         if signing_public_key != public_key:
@@ -157,7 +197,7 @@ def prepare(args):
         run("xcrun", "stapler", "staple", app)
         run("xcrun", "stapler", "validate", app)
         run("spctl", "--assess", "--type", "execute", "--verbose=2", app)
-        validate_app(app, args.version, args.build, revision)
+        validate_app(app, args.version, args.build, revision, profile_uuid)
         zip_file = output / f"Daydreaming-{args.version}-{args.build}.zip"
         run("ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", app, zip_file)
         dmg_file = output / f"Daydreaming-{args.version}-{args.build}.dmg"
@@ -197,6 +237,7 @@ def prepare(args):
                     "generatedNotes": args.generated_notes,
                     "previousFeedSHA256": hashlib.sha256(previous_feed.read_bytes()).hexdigest(),
                     "build": args.build, "bundleIdentifier": BUNDLE_ID, "teamIdentifier": TEAM,
+                    "weatherKitProfileUUID": profile_uuid,
                     "sparkleVersion": VERSION, "sparkleDistributionSHA256": SHA256, "feedURL": FEED_URL,
                     "publicKey": public_key, "archiveSignatures": {dmg_file.name: signature, zip_file.name: zip_signature},
                     "artifacts": checksums,
@@ -212,6 +253,8 @@ def main():
     parser.add_argument("--build", required=True, type=int)
     parser.add_argument("--identity", required=True, help="Explicit Daydreaming Developer ID Application identity")
     parser.add_argument("--notary-profile", required=True, help="Explicit existing notarytool Keychain profile")
+    parser.add_argument("--weatherkit-profile", required=True, type=Path,
+                        help="Developer ID provisioning profile authorizing Daydreaming WeatherKit")
     parser.add_argument("--notes", required=True, type=Path, help="Committed .md, .html or .txt release notes")
     parser.add_argument("--generated-notes", action="store_true", help="Allow notes generated outside the committed tree")
     parser.add_argument("--previous-feed", type=Path, help="Current live signed feed, verified before build")

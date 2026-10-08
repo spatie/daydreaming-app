@@ -24,4 +24,11 @@ enum WallpaperController {
             try NSWorkspace.shared.setDesktopImageURL(imageURL, for: screen, options: desktopOptions)
         }
     }
+
+    static func isApplied(_ imageURL: URL) -> Bool {
+        let screens = NSScreen.screens
+        return !screens.isEmpty && screens.allSatisfy {
+            NSWorkspace.shared.desktopImageURL(for: $0)?.standardizedFileURL == imageURL.standardizedFileURL
+        }
+    }
 }

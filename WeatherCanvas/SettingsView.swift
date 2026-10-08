@@ -1,6 +1,7 @@
 import AppKit
 import CoreLocation
 import SwiftUI
+import WeatherKit
 
 private enum WallpaperQuality: String, CaseIterable, Identifiable {
     case good = "Good"
@@ -232,8 +233,8 @@ struct SettingsView: View {
                     Text("Updates will be available after the first release.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
-                Toggle("Share Installation Statistics", isOn: $sharesInstallationStatistics)
-                    .help("Reports a random installation ID, app version and macOS version. Pictures, ideas and API keys are never included.")
+                Toggle("Share Installation Statistics and Mac Name", isOn: $sharesInstallationStatistics)
+                    .help("Reports this Mac’s computer name, a random installation ID, app and macOS versions, chip type and report time. Pictures, ideas and API keys are not included.")
             }
         }
     }
@@ -249,9 +250,7 @@ struct SettingsView: View {
                         Text(quality.rawValue).tag(Optional(quality))
                     }
                 }
-                .help("Desktop wallpaper quality. Previews use low quality for speed. Higher quality can cost more.")
-                Text("Previews use low quality for speed.")
-                    .font(.caption).foregroundStyle(.secondary)
+                .help("Desktop wallpaper quality. Higher quality can cost more.")
                 Stepper(
                     "Images per Day: \(model.settings.dailyGenerationLimit)",
                     value: $model.settings.dailyGenerationLimit,
@@ -275,8 +274,13 @@ struct SettingsView: View {
                         Button("Refresh Location") { model.refreshWeatherLocation() }
                     }
                 }
-                Text("Forecast from MET Norway. Apple Maps finds places; Current Location uses your Mac’s approximate location.")
+                Text(model.isShowingAppleWeather
+                     ? "Apple Maps finds places; Current Location uses your Mac’s approximate location."
+                     : "Forecast from MET Norway. Apple Maps finds places; Current Location uses your Mac’s approximate location.")
                     .font(.caption).foregroundStyle(.secondary)
+                if model.isShowingAppleWeather, let attribution = model.appleWeatherAttribution {
+                    AppleWeatherCredit(attribution: attribution)
+                }
             }
             if let lastUpdated = model.lastUpdated {
                 Section("Your Desktop") {
@@ -324,5 +328,24 @@ struct SettingsView: View {
             .foregroundStyle(.red)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityLabel("Error: \(text)")
+    }
+}
+
+private struct AppleWeatherCredit: View {
+    let attribution: WeatherAttribution
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        HStack(spacing: 6) {
+            AsyncImage(url: colorScheme == .dark ? attribution.combinedMarkDarkURL : attribution.combinedMarkLightURL) { image in
+                image.resizable().scaledToFit().frame(height: 13)
+            } placeholder: {
+                Text("Apple Weather")
+            }
+            Link("Data sources", destination: attribution.legalPageURL)
+                .foregroundStyle(.secondary)
+        }
+        .font(.caption2)
+        .accessibilityElement(children: .combine)
     }
 }

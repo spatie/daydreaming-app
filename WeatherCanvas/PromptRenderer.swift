@@ -17,6 +17,13 @@ enum PromptRenderer {
         return rendered + styleNote + appearanceNote + "\n\nThe local time is " + time + ", and the weather is " + weather + ". Preserve the composition and main subjects so it remains recognizably the same picture."
     }
 
+    static func renderHour(_ template: String, date: Date, weather: WeatherSnapshot, style: WallpaperStyle = .natural,
+                           appearance: WallpaperAppearance? = nil) -> String {
+        let prompt = renderHour(template, date: date, weather: weather.label, style: style, appearance: appearance)
+        guard let details = weather.details else { return prompt }
+        return prompt + "\n\nApple Weather details for this hour: " + details.promptText
+    }
+
     static func render(_ template: String, context: RenderContext) -> String {
         let time = DateFormatter.localizedString(from: context.slotDate, dateStyle: .none, timeStyle: .short)
         let date = DateFormatter.localizedString(from: context.slotDate, dateStyle: .full, timeStyle: .none)

@@ -1,5 +1,8 @@
 import base64
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+import plistlib
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -65,6 +68,26 @@ class FeedTests(unittest.TestCase):
 
 
 class ReleaseSafetyTests(unittest.TestCase):
+    @patch("prepare.subprocess.run")
+    def testWeatherKitProfileMustAuthorizeExactProductionApp(self, run):
+        profile = {"UUID": "test-uuid", "Name": "Daydreaming WeatherKit",
+                   "TeamIdentifier": [prepare.TEAM],
+                   "ExpirationDate": (datetime.now(timezone.utc) + timedelta(days=30)).replace(tzinfo=None),
+                   "Entitlements": {"com.apple.application-identifier": f"{prepare.TEAM}.{prepare.BUNDLE_ID}",
+                                    "com.apple.developer.weatherkit": True}}
+        with tempfile.TemporaryDirectory() as name:
+            path = Path(name) / "Daydreaming.provisionprofile"
+            path.write_bytes(b"signed fixture")
+            run.return_value = subprocess.CompletedProcess([], 0, plistlib.dumps(profile))
+            self.assertEqual(prepare.weatherkit_profile(path)["UUID"], "test-uuid")
+            for changed in ({"com.apple.developer.weatherkit": False},
+                            {"com.apple.application-identifier": "OTHER.be.spatie.daydreaming"}):
+                invalid = dict(profile)
+                invalid["Entitlements"] = {**profile["Entitlements"], **changed}
+                run.return_value = subprocess.CompletedProcess([], 0, plistlib.dumps(invalid))
+                with self.assertRaisesRegex(ValueError, "does not authorize"):
+                    prepare.weatherkit_profile(path)
+
     @patch("prepare.run")
     def testDirtyTreeStopsBeforeAnyBuildOrNetwork(self, run):
         run.return_value = "?? unreviewed.swift"

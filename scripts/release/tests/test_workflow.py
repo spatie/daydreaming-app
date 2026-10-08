@@ -64,6 +64,28 @@ class NotesTests(unittest.TestCase):
 
 
 class ReleaseBoundaryTests(unittest.TestCase):
+    @patch("publish.verify_dmg")
+    @patch("publish.validate_app")
+    @patch("publish.signing_arguments", return_value=[])
+    @patch("publish.subprocess.run")
+    @patch("publish.fetch")
+    def testPublisherValidatesThePreparedWeatherKitProfile(self, fetch, run, signing, validate, verify_dmg):
+        with tempfile.TemporaryDirectory() as folder:
+            directory = Path(folder) / "release"
+            work = Path(folder) / "work"
+            directory.mkdir()
+            work.mkdir()
+            fetch.return_value = work / "Sparkle"
+            run.return_value = subprocess.CompletedProcess([], 0, "", "TeamIdentifier=97KRXCRMAY")
+            manifest = {"version": "0.9.0", "build": 53, "gitRevision": "a" * 40,
+                        "weatherKitProfileUUID": "f7307d68-c04f-49cc-b2b2-37730b63ed25",
+                        "archiveSignatures": {"Daydreaming-0.9.0-53.dmg": "dmg", "Daydreaming-0.9.0-53.zip": "zip"}}
+
+            publish.verify_signatures(directory, manifest, work, None)
+
+            validate.assert_called_once_with(work / "Daydreaming.app", "0.9.0", 53, "a" * 40,
+                                             "f7307d68-c04f-49cc-b2b2-37730b63ed25")
+
     def testPublicKeyDerivationAgainstRFC8032WithoutExportingOwnerKey(self):
         import base64
         with tempfile.TemporaryDirectory() as folder:

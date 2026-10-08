@@ -114,7 +114,7 @@ final class HourlyGenerationProcessor {
                                             retryAfter: services.now().addingTimeInterval(60), underlying: error)
             }
             let recipe = HourWallpaperCache.recipeID(for: job.settings, date: date)
-            job = HourlyGenerationJob(id: HourWallpaperCache.jobID(recipeID: recipe, hour: job.hour, weather: weather.label, renderProfile: job.renderProfile),
+            job = HourlyGenerationJob(id: HourWallpaperCache.jobID(recipeID: recipe, hour: job.hour, weather: weather.cacheKey, renderProfile: job.renderProfile),
                                       hour: job.hour, date: date, recipeID: recipe, weather: weather, settings: job.settings,
                                       sourcePath: job.sourcePath, priority: .manual, requiresCredit: true,
                                       forceFresh: job.forceFresh, userInitiated: true, intent: .preview, renderProfile: job.renderProfile,

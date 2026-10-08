@@ -62,15 +62,16 @@ final class InstallationReporterTests: XCTestCase {
         XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
         let body = try XCTUnwrap(request.httpBody)
         let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
-        XCTAssertEqual(Set(json.keys), ["token", "app_version", "app_build", "macos_version", "architecture", "reported_at", "schema_version"])
+        XCTAssertEqual(Set(json.keys), ["token", "app_version", "app_build", "macos_version", "mac_name", "architecture", "reported_at", "schema_version"])
         let token = try XCTUnwrap(json["token"] as? String)
         XCTAssertNotNil(UUID(uuidString: token))
         XCTAssertEqual(token, fixture.defaults.string(forKey: InstallationReporter.tokenKey))
         XCTAssertEqual(json["app_version"] as? String, "1.2.3")
         XCTAssertEqual(json["app_build"] as? String, "42")
         XCTAssertEqual(json["macos_version"] as? String, "26.0.1")
+        XCTAssertEqual(json["mac_name"] as? String, "Test Mac")
         XCTAssertEqual(json["architecture"] as? String, "arm64")
-        XCTAssertEqual(json["schema_version"] as? Int, 1)
+        XCTAssertEqual(json["schema_version"] as? Int, 2)
         XCTAssertEqual(json["reported_at"] as? String, "2026-10-06T12:00:00Z")
         XCTAssertEqual(fixture.defaults.object(forKey: InstallationReporter.successDateKey) as? Date, fixture.date)
         XCTAssertEqual(fixture.defaults.string(forKey: InstallationReporter.successVersionKey), "1.2.3")
@@ -197,7 +198,7 @@ private final class Fixture {
                   runtime: InstallationReporter.Runtime = .init(bundleID: AppRuntime.productionBundleID, isDebug: false, isRunningTests: false),
                   version: String = "1.2.3", build: String = "42") -> InstallationReporter {
         InstallationReporter(defaults: defaults, runtime: runtime,
-                             metadata: .init(appVersion: version, appBuild: build, macOSVersion: "26.0.1", architecture: "arm64"),
+                             metadata: .init(appVersion: version, appBuild: build, macOSVersion: "26.0.1", macName: "Test Mac", architecture: "arm64"),
                              now: { self.date }, transport: { try await transport.send($0) })
     }
 }

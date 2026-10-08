@@ -25,7 +25,7 @@ Connect your own **OpenAI API key** in Settings. Daydreaming is free; OpenAI bil
 
 Small previews stay in the window. Desktop wallpapers use the full-size rendering profile and your selected quality. A daily image limit bounds requests, and duplicate work is coalesced. Reusing a matching cached image makes no new API request.
 
-Originals and generated variations stay on your Mac. Creation sends a prepared picture, your idea, time, weather and any explicitly included text context to the selected API. Your key stays in macOS Keychain. Local forecasts come from [MET Norway](https://api.met.no/), not Apple Weather. Optional installation reports exclude pictures, ideas, location and keys and can be disabled in Settings.
+Originals and generated variations stay on your Mac. Creation sends a prepared picture, your idea, time, weather and any explicitly included text context to the selected API. Your key stays in macOS Keychain. Local weather comes from [Apple Weather](https://developer.apple.com/weatherkit/), with [MET Norway](https://api.met.no/) as a fallback. Daydreaming needs no weather API key from you. Installation reports include your Mac’s computer name and app and system versions, but exclude pictures, ideas, location and keys. You can disable reports in Settings.
 
 OpenAI is the supported image provider. The code uses a driver interface for future integrations. A Codex handoff is available for manual work, but it is not a connected image provider or an automatic wallpaper backend. See [image drivers](docs/IMAGE_DRIVERS.md) and the [privacy policy](https://getdaydreaming.com/privacy).
 

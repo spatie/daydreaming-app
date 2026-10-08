@@ -396,6 +396,69 @@ struct WeatherSnapshot: Codable, Equatable, Sendable {
     let label: String
     let symbol: String
     let fetchedAt: Date
+    var details: WeatherVisualDetails?
+    var source: WeatherDataSource?
+
+    init(label: String, symbol: String, fetchedAt: Date, details: WeatherVisualDetails? = nil,
+         source: WeatherDataSource? = nil) {
+        self.label = label
+        self.symbol = symbol
+        self.fetchedAt = fetchedAt
+        self.details = details
+        self.source = source
+    }
+
+    var cacheKey: String { details.map { label + "|" + $0.visualIdentity } ?? label }
+}
+
+enum WeatherDataSource: String, Codable, Sendable { case apple }
+
+struct WeatherVisualDetails: Codable, Equatable, Sendable {
+    let temperatureCelsius: Int
+    let apparentTemperatureCelsius: Int
+    let dewPointCelsius: Int
+    let cloudCoverPercent: Int
+    let lowCloudPercent: Int
+    let mediumCloudPercent: Int
+    let highCloudPercent: Int
+    let humidityPercent: Int
+    let precipitationType: String?
+    let precipitationChancePercent: Int?
+    let precipitationAmountMillimeters: Double?
+    let precipitationIntensityMillimetersPerHour: Double?
+    let windSpeedKilometersPerHour: Int
+    let windGustKilometersPerHour: Int?
+    let windDirection: String
+    let visibilityKilometers: Double
+    let pressureMillibars: Int
+    let pressureTrend: String
+    let uvIndex: Int
+    let isDaylight: Bool
+
+    var visualIdentity: String {
+        let rain = precipitationIntensityMillimetersPerHour ?? precipitationAmountMillimeters ?? 0
+        return "\(isDaylight):\(cloudCoverPercent / 25):\(rain < 0.5 ? 0 : rain < 2 ? 1 : 2):\(windSpeedKilometersPerHour / 20)"
+    }
+
+    var promptText: String {
+        var parts = [
+            isDaylight ? "daylight" : "nighttime",
+            "temperature \(temperatureCelsius)°C, feels like \(apparentTemperatureCelsius)°C",
+            "dew point \(dewPointCelsius)°C",
+            "cloud cover \(cloudCoverPercent)% (low \(lowCloudPercent)%, middle \(mediumCloudPercent)%, high \(highCloudPercent)%)",
+            "humidity \(humidityPercent)%",
+        ]
+        if let precipitationType { parts.append("precipitation type \(precipitationType)") }
+        if let precipitationChancePercent { parts.append("chance of precipitation \(precipitationChancePercent)%") }
+        if let precipitationAmountMillimeters { parts.append(String(format: "expected precipitation %.1f mm this hour", precipitationAmountMillimeters)) }
+        if let precipitationIntensityMillimetersPerHour { parts.append(String(format: "current precipitation intensity %.1f mm/h", precipitationIntensityMillimetersPerHour)) }
+        parts.append("wind \(windSpeedKilometersPerHour) km/h from \(windDirection)")
+        if let windGustKilometersPerHour { parts.append("gusts \(windGustKilometersPerHour) km/h") }
+        parts.append(String(format: "visibility %.1f km", visibilityKilometers))
+        parts.append("pressure \(pressureMillibars) mbar (\(pressureTrend))")
+        parts.append("UV index \(uvIndex)")
+        return parts.joined(separator: "; ")
+    }
 }
 
 struct RenderContext: Sendable {

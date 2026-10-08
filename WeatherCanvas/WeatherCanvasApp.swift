@@ -13,6 +13,7 @@ struct DaydreamingApp: App {
         }
         let model = AppModel()
         _model = StateObject(wrappedValue: model)
+        AppDelegate.restoreSavedDesktopAtLaunch = { [weak model] in model?.restoreSavedDesktopAtLaunch() }
         UpdaterManager.shared.observeImageWork(model.$isGenerating)
         UpdaterManager.shared.beforeInstallation = { [weak model] in model?.prepareForAppUpdate() }
     }
@@ -104,8 +105,10 @@ private struct DaydreamingCommands: Commands {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     static var openMainWindow: (() -> Void)?
     static var commitMainPrompt: (() -> Void)?
+    static var restoreSavedDesktopAtLaunch: (() -> Void)?
     private let updater = UpdaterManager.shared
     private var installationReportingTask: Task<Void, Never>?
+    private var desktopRestorationTask: Task<Void, Never>?
     private var windowObservers: [NSObjectProtocol] = []
     private var closingWindows = Set<ObjectIdentifier>()
 
@@ -132,10 +135,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        Self.restoreSavedDesktopAtLaunch?()
         updater.start()
         updateDockPresence()
         #if !DEBUG
         guard !AppRuntime.isPreview, !AppRuntime.isRunningTests else { return }
+        desktopRestorationTask = Task {
+            do { try await Task.sleep(for: .seconds(10)) }
+            catch { return }
+            Self.restoreSavedDesktopAtLaunch?()
+        }
         installationReportingTask = Task {
             while !Task.isCancelled {
                 _ = await InstallationReporter.shared.reportIfDue()
@@ -166,6 +175,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        desktopRestorationTask?.cancel()
         installationReportingTask?.cancel()
         InstallationReporter.shared.cancelPendingReport()
         for observer in windowObservers { NotificationCenter.default.removeObserver(observer) }
@@ -235,7 +245,7 @@ private struct MenuBarContent: View {
             .help([model.detail, model.lastGenerationMenuLabel].filter { !$0.isEmpty }.joined(separator: "\n"))
             .disabled(true)
         Label(model.menuWeatherStatus, systemImage: model.workspaceWeather?.symbol ?? "cloud")
-            .help("Weather data: MET Norway. Uses the latest local forecast.")
+            .help(model.workspaceWeather?.source == .apple ? "Weather data: Apple Weather." : "Weather data: MET Norway.")
             .disabled(true)
     }
 

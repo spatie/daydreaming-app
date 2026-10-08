@@ -18,6 +18,8 @@ For local releases, authenticate the CLI with `op signin` before looking up the 
 
 Daydreaming's Sparkle key is separate from Bloom's. Keep its private half in Keychain or the `DAYDREAMING_SPARKLE_PRIVATE_KEY` Actions secret. Only the public half belongs in the repository. A local release can sign through Keychain without exporting that private key.
 
+Apple Weather requires the WeatherKit capability and app service on the `be.spatie.daydreaming` App ID in Certificates, Identifiers & Profiles. Create a Developer ID provisioning profile for that App ID after enabling both. The profile must authorize `com.apple.developer.weatherkit`. Download it for local builds and base64 encode the same profile in the `DAYDREAMING_WEATHERKIT_PROFILE` Actions secret. Regenerate the profile after changing the App ID's capabilities. No WeatherKit web API key is needed for this native app.
+
 Download storage is the dedicated Laravel Cloud R2 release bucket, with a `releases` prefix, an EU endpoint and S3 region `auto`. Its tested conditional `PutObject` returns 412 when a filename already exists. Bucket credentials stay in Actions secrets. The website and workflow must use the identical `DAYDREAMING_OBJECT_BASE_URL`.
 
 Before making source public, scan the entire Git history with `gitleaks git . --redact=100 --no-banner`. Also check tracked files for keys, exports, `.env` files and personal captures. Ignore rules protect new files; they do not remove secrets from history. If a real credential is found, rotate it and clean the history before publication. A clean scan is a check, not a substitute for reviewing what will become public.
@@ -44,6 +46,7 @@ Configure these GitHub Actions secrets for this repository:
 | `APPLE_API_KEY_ID` | Apple API key ID |
 | `APPLE_API_ISSUER_ID` | Apple team issuer ID |
 | `DAYDREAMING_SPARKLE_PRIVATE_KEY` | Daydreaming's existing Sparkle 2.10 base64 private seed |
+| `DAYDREAMING_WEATHERKIT_PROFILE` | Base64 Developer ID provisioning profile for `be.spatie.daydreaming` with WeatherKit |
 | `DAYDREAMING_S3_ACCESS_KEY_ID` | Access key scoped to the Daydreaming artifact bucket/prefix |
 | `DAYDREAMING_S3_SECRET_ACCESS_KEY` | Secret for that object-storage key |
 | `DAYDREAMING_RELEASE_TOKEN` | Website token scoped to the artifact/appcast publication API |
@@ -75,6 +78,7 @@ python3 scripts/release/prepare.py \
   --version 0.0.1 --build 11 \
   --identity 'Developer ID Application: Spatie (97KRXCRMAY)' \
   --notary-profile daydreaming-release-20261007 \
+  --weatherkit-profile /path/to/Daydreaming-WeatherKit.provisionprofile \
   --notes docs/releases/0.0.1.md \
   --output /tmp/daydreaming-release-0.0.1-11
 ```
