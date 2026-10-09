@@ -199,3 +199,14 @@ Version 0.9.0, build 53 was published on October 8, 2026 from source `4f0c14ba5d
 - Signed feed SHA256: `969fd41d112887a76aac5a08327ac226b575f414f8f02b814ec3e1593045de89`
 
 Public downloads and the live signed feed matched the manifest. The temporary publication key was revoked. The installed app reported the expected source revision and sent its Mac name to the private installation admin. The GitHub tag points to the built source.
+
+## Published release 0.9.1
+
+Version 0.9.1, build 56 was published on October 9, 2026 from source `f9453cc5c7080612ecbf4e54e3ac3334fe76d398`. Verification passed 403 app tests and 22 release-tool tests. The universal app and DMG were notarized and stapled, and the app inside the mounted DMG passed Gatekeeper assessment.
+
+- Manifest SHA256: `51ab6972087f6715ca6ad5ca8b010c66819a4b44f3127339ce86ea42b25afb5e`
+- DMG SHA256: `fa99d6f048f84027316fed67d3bd00bf27b3686a0f881e41b090dcd738cb9cfb`
+- ZIP SHA256: `d9aada4b4e4644149313a01f23d7c97c93131d2dc78960e030f628bbdb1272c3`
+- Signed feed SHA256: `81fc9c7c07c197593d053c98dce4c2d62c33a7ed73f91bd6ac97033eeacaa16a`
+
+The public download, GitHub assets and live signed feed matched the manifest. The temporary publication key was revoked. The installed app reports the built source revision and preserves its designated requirement. The GitHub tag points to the built source.

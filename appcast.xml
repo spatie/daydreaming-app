@@ -9,6 +9,16 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <description>Daydreaming updates.</description>
         <language>en</language>
         <item>
+            <title>0.9.1</title>
+            <pubDate>Fri, 09 Oct 2026 12:15:56 +0200</pubDate>
+            <sparkle:version>56</sparkle:version>
+            <sparkle:shortVersionString>0.9.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[- Fix wallpaper updates getting stuck waiting for location after a Mac wakes from sleep. Daydreaming can use a recent saved location while it finds a fresh one.
+]]></description>
+            <enclosure url="https://getdaydreaming.com/releases/Daydreaming-0.9.1-56.dmg" length="8027209" type="application/octet-stream" sparkle:edSignature="FLpwE8uV3lh1irwVoSnyB5KYdApUvM+tlzWcn504UKN+XnCLyiSxgPVEujqGIKleOiXDxUdvMi4zeYxV8aVGBA=="/>
+        </item>
+        <item>
             <title>0.9.0</title>
             <pubDate>Thu, 08 Oct 2026 13:32:26 +0200</pubDate>
             <sparkle:version>53</sparkle:version>
@@ -148,6 +158,6 @@ Daydreaming is free and postcardware. Image creation uses your own OpenAI API ac
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: vcopjYPF10my5noeCnPLzVCWDf+hbpDJLZfUOAKXJwjL9ZTGySfjXKaJUvH+b4XHEFTGoMzZQ4hzh7qBw4LACg==
-length: 10154
+edSignature: jVWTHIfzzQ0fmMIOwfSP1rA5jeB4siIixOH0U5sWnEVDhGeKkOpDI1eP6dOVPfITNEoh+RNc57AlKHVta2EFCw==
+length: 10975
 -->
