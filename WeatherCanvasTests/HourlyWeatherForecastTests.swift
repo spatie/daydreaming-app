@@ -156,6 +156,17 @@ final class HourlyWeatherForecastTests: XCTestCase {
         XCTAssertFalse(LocalWeatherLocationPolicy.isFresh(location(age: 0, accuracy: -1), now: now))
         XCTAssertFalse(LocalWeatherLocationPolicy.isFresh(location(age: 0, accuracy: 50_000), now: now))
         XCTAssertFalse(LocalWeatherLocationPolicy.isFresh(location(age: -120), now: now))
+        XCTAssertTrue(LocalWeatherLocationPolicy.isUsable(location(age: 8 * 60 * 60), now: now))
+        XCTAssertFalse(LocalWeatherLocationPolicy.isUsable(location(age: 24 * 60 * 60), now: now))
+        XCTAssertFalse(LocalWeatherLocationPolicy.isUsable(location(age: 8 * 60 * 60, accuracy: 50_000), now: now))
+    }
+
+    func testPreviousLocationCanResolveWeatherAfterAnOvernightSleep() throws {
+        let previous = CLLocation(coordinate: CLLocationCoordinate2D(latitude: 51.22, longitude: 4.40),
+                                  altitude: 0, horizontalAccuracy: 1_000, verticalAccuracy: -1,
+                                  timestamp: .now.addingTimeInterval(-8 * 60 * 60))
+        XCTAssertFalse(LocalWeatherLocationPolicy.isFresh(previous))
+        XCTAssertEqual(try WeatherLocationSelection.current.resolve(current: previous).coordinate.latitude, 51.22)
     }
 
     @MainActor

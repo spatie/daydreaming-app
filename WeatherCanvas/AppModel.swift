@@ -341,12 +341,12 @@ final class AppModel: ObservableObject {
             guard let self else { return }
             self.refreshOnboardingLocation()
             guard self.settings.weatherLocation == .current else { return }
-            if self.locationReader.freshLocation == nil { self.currentLocalWeather = nil }
+            if self.locationReader.usableLocation == nil { self.currentLocalWeather = nil }
             self.nextWorkspaceWeatherRefresh = .distantPast
             if self.onboardingComplete { Task { await self.refreshWorkspaceWeather() } }
             guard self.onboardingComplete, self.settings.automaticUpdates || self.pendingManualGeneration else { return }
             if self.pendingManualGeneration && Date() > self.manualRequestExpiresAt { self.pendingManualGeneration = false }
-            if self.pendingManualGeneration && self.locationReader.location == nil {
+            if self.pendingManualGeneration && self.locationReader.usableLocation == nil {
                 if self.locationReader.authorizationStatus == .denied || self.locationReader.authorizationStatus == .restricted {
                     self.pendingManualGeneration = false
                     self.show(WeatherContextError.locationPermissionRequired)
@@ -368,7 +368,10 @@ final class AppModel: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in await self?.refreshIfNeeded() }
+            Task { @MainActor in
+                self?.locationReader.request(force: true)
+                await self?.refreshIfNeeded()
+            }
         }
 
         settings.retryUnresolvedPromptFiles()
@@ -998,7 +1001,9 @@ final class AppModel: ObservableObject {
         if let weatherLocationName { return weatherLocationName }
         switch locationReader.authorizationStatus {
         case .denied, .restricted: return "Location access is off"
-        default: return locationReader.freshLocation == nil ? "Finding your location…" : "Local area"
+        default:
+            if locationReader.freshLocation != nil { return "Local area" }
+            return locationReader.usableLocation == nil ? "Finding your location…" : "Last known location"
         }
     }
 
@@ -1050,7 +1055,8 @@ final class AppModel: ObservableObject {
         if hourlyServices == nil && settings.weatherLocation == .current {
             let authorization = locationReader.authorizationStatus
             guard authorization == .authorized || authorization == .authorizedAlways else { return }
-            if locationReader.freshLocation == nil { locationReader.request(); return }
+            if locationReader.freshLocation == nil { locationReader.request() }
+            guard locationReader.usableLocation != nil else { return }
         }
         nextWorkspaceWeatherRefresh = pipelineNow.addingTimeInterval(900)
         let snapshotSettings = settings
@@ -2900,7 +2906,7 @@ final class AppModel: ObservableObject {
     }
 
     private func cachedForecast(at date: Date) -> WeatherSnapshot? {
-        guard let location = try? settings.weatherLocation.resolve(current: settings.weatherLocation == .current ? locationReader.freshLocation : nil) else { return nil }
+        guard let location = try? settings.weatherLocation.resolve(current: settings.weatherLocation == .current ? locationReader.usableLocation : nil) else { return nil }
         return appleWeatherProvider.cachedWeather(at: date, location: location)
             ?? weatherProvider.cachedWeather(at: date, location: location)
     }
@@ -2914,9 +2920,8 @@ final class AppModel: ObservableObject {
             if locationReader.authorizationStatus == .denied || locationReader.authorizationStatus == .restricted {
                 throw WeatherContextError.locationPermissionRequired
             }
-            throw WeatherContextError.waitingForLocation
         }
-        let location = try snapshotSettings.weatherLocation.resolve(current: snapshotSettings.weatherLocation == .current ? locationReader.freshLocation : nil)
+        let location = try snapshotSettings.weatherLocation.resolve(current: snapshotSettings.weatherLocation == .current ? locationReader.usableLocation : nil)
         let snapshot: WeatherSnapshot
         do { snapshot = try await appleWeatherProvider.weather(at: date, location: location) }
         catch {

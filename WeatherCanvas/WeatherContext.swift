@@ -15,22 +15,48 @@ enum OnboardingLocationPolicy {
 }
 
 enum LocalWeatherLocationPolicy {
-    static func isFresh(_ location: CLLocation, now: Date = .now) -> Bool {
+    static let maximumFallbackAge: TimeInterval = 24 * 60 * 60
+
+    static func isUsable(_ location: CLLocation, now: Date = .now) -> Bool {
         CLLocationCoordinate2DIsValid(location.coordinate)
             && location.horizontalAccuracy >= 0
             && location.horizontalAccuracy <= 10_000
             && now.timeIntervalSince(location.timestamp) >= -60
-            && now.timeIntervalSince(location.timestamp) < 900
+            && now.timeIntervalSince(location.timestamp) < maximumFallbackAge
+    }
+
+    static func isFresh(_ location: CLLocation, now: Date = .now) -> Bool {
+        isUsable(location, now: now) && now.timeIntervalSince(location.timestamp) < 900
     }
 }
 
 @MainActor
 final class LocationReader: NSObject, @preconcurrency CLLocationManagerDelegate {
+    private struct SavedLocation: Codable {
+        let latitude: Double
+        let longitude: Double
+        let horizontalAccuracy: Double
+        let timestamp: Date
+
+        init(_ location: CLLocation) {
+            latitude = location.coordinate.latitude
+            longitude = location.coordinate.longitude
+            horizontalAccuracy = location.horizontalAccuracy
+            timestamp = location.timestamp
+        }
+
+        var location: CLLocation {
+            CLLocation(coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude), altitude: 0,
+                       horizontalAccuracy: horizontalAccuracy, verticalAccuracy: -1, timestamp: timestamp)
+        }
+    }
+
+    private static let savedLocationKey = "lastWeatherLocation"
     private let manager = CLLocationManager()
+    private let defaults: UserDefaults
     private(set) var location: CLLocation?
     var onLocation: (() -> Void)?
     private var hasRequested = false
-    private var isRequesting = false
     private var nextRequestAt = Date.distantPast
     private var nameRequest: MKReverseGeocodingRequest?
     private(set) var placeName: String?
@@ -38,23 +64,32 @@ final class LocationReader: NSObject, @preconcurrency CLLocationManagerDelegate 
     var freshLocation: CLLocation? {
         location.flatMap { LocalWeatherLocationPolicy.isFresh($0) ? $0 : nil }
     }
+    var usableLocation: CLLocation? {
+        guard authorizationStatus == .authorized || authorizationStatus == .authorizedAlways else { return nil }
+        return location.flatMap { LocalWeatherLocationPolicy.isUsable($0) ? $0 : nil }
+    }
     var authorizationStatus: CLAuthorizationStatus { manager.authorizationStatus }
 
-    override init() {
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        if let data = defaults.data(forKey: Self.savedLocationKey),
+           let saved = try? JSONDecoder().decode(SavedLocation.self, from: data),
+           LocalWeatherLocationPolicy.isUsable(saved.location) {
+            location = saved.location
+        }
         super.init()
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyKilometer
     }
 
     func request(force: Bool = false) {
-        guard !isRequesting, force || Date() >= nextRequestAt else { return }
+        guard force || Date() >= nextRequestAt else { return }
         guard force || freshLocation == nil else { return }
         hasRequested = true
         switch manager.authorizationStatus {
         case .notDetermined:
             manager.requestWhenInUseAuthorization()
         case .authorized, .authorizedAlways:
-            isRequesting = true
             nextRequestAt = Date().addingTimeInterval(30)
             manager.requestLocation()
         default:
@@ -64,14 +99,13 @@ final class LocationReader: NSObject, @preconcurrency CLLocationManagerDelegate 
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         if hasRequested && (manager.authorizationStatus == .authorized || manager.authorizationStatus == .authorizedAlways) {
-            isRequesting = true
             nextRequestAt = Date().addingTimeInterval(30)
             manager.requestLocation()
         } else {
             if manager.authorizationStatus == .denied || manager.authorizationStatus == .restricted {
                 manager.stopUpdatingLocation()
-                isRequesting = false
                 location = nil
+                defaults.removeObject(forKey: Self.savedLocationKey)
                 nameRequest?.cancel()
                 nameRequest = nil
                 placeName = nil
@@ -82,13 +116,17 @@ final class LocationReader: NSObject, @preconcurrency CLLocationManagerDelegate 
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        isRequesting = false
-        guard let latest = locations.last(where: { LocalWeatherLocationPolicy.isFresh($0) }) else {
+        guard let latest = locations.last(where: { LocalWeatherLocationPolicy.isFresh($0) })
+                ?? locations.last(where: { LocalWeatherLocationPolicy.isUsable($0) }) else {
             onLocation?()
             return
         }
         let previous = location
+        if let previous, latest.timestamp <= previous.timestamp { onLocation?(); return }
         location = latest
+        if let data = try? JSONEncoder().encode(SavedLocation(latest)) {
+            defaults.set(data, forKey: Self.savedLocationKey)
+        }
         onLocation?()
         if placeName == nil || previous.map({ latest.distance(from: $0) > 1_000 }) == true {
             nameRequest?.cancel()
@@ -106,7 +144,6 @@ final class LocationReader: NSObject, @preconcurrency CLLocationManagerDelegate 
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        isRequesting = false
         onLocation?()
     }
 }
@@ -500,7 +537,7 @@ extension WeatherLocationSelection {
         if let place = fixedPlace, place.isValid {
             return CLLocation(latitude: place.latitude, longitude: place.longitude)
         }
-        guard self == .current, let current, LocalWeatherLocationPolicy.isFresh(current) else {
+        guard self == .current, let current, LocalWeatherLocationPolicy.isUsable(current) else {
             throw WeatherContextError.waitingForLocation
         }
         return current
