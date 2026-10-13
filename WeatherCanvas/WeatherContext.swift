@@ -209,6 +209,10 @@ final class AppleWeatherProvider {
         return HourlyWeatherForecast.select(date: date, now: now, current: report.current, forecast: report.hourly)
     }
 
+    func retryAfterConnectionRestored() {
+        retryAfter = .distantPast
+    }
+
     func weather(at date: Date, location: CLLocation, now: Date = .now) async throws -> WeatherSnapshot {
         let coordinates = Self.coordinates(for: location)
         if coordinates != cachedCoordinates {

@@ -335,6 +335,45 @@ final class AppModelHourlyTests: XCTestCase {
     }
 
     @MainActor
+    func testConnectionRestorationRetriesOfflineUpdateBeforeBackoffExpires() async throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        fake.creationError = URLError(.notConnectedToInternet)
+        let model = fake.model(nextCheck: fake.clock.addingTimeInterval(3_600))
+        defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+
+        await model.refreshIfNeeded(userInitiated: true)
+        await appEventually { fake.created.count == 1 && model.activity == .failed && !model.isGenerating }
+        XCTAssertEqual(try XCTUnwrap(model.nextCheck(after: fake.clock)).timeIntervalSince(fake.clock), 60)
+
+        fake.creationError = nil
+        await model.networkConnectionRestored()
+        await appEventually { fake.applied.count == 1 && !model.isGenerating }
+        XCTAssertEqual(fake.created.count, 2)
+    }
+
+    @MainActor
+    func testForecastFailureRetriesAutomaticallyAndOnConnectionRestoration() async throws {
+        let fake = try AppHourlyFake()
+        defer { fake.removeFiles() }
+        fake.weatherError = WeatherContextError.forecastUnavailable
+        let model = fake.model(nextCheck: fake.clock.addingTimeInterval(3_600))
+        defer { model.stopBackgroundTasks(); fake.sleeper.cancelAll() }
+
+        await model.refreshIfNeeded(userInitiated: true)
+        XCTAssertEqual(model.status, "Update delayed · Weather unavailable")
+        XCTAssertEqual(model.recovery, .retry)
+        XCTAssertEqual(try XCTUnwrap(model.nextCheck(after: fake.clock)).timeIntervalSince(fake.clock), 60)
+        XCTAssertTrue(fake.created.isEmpty)
+
+        fake.weatherError = nil
+        await model.networkConnectionRestored()
+        await appEventually { fake.applied.count == 1 && !model.isGenerating }
+        XCTAssertEqual(fake.weatherCalls, 2)
+        XCTAssertEqual(fake.created.count, 1)
+    }
+
+    @MainActor
     func testOldProviderFailureCannotReplaceTheNewConnectionStatus() async throws {
         let fake = try AppHourlyFake()
         defer { fake.removeFiles() }

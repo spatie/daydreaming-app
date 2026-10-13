@@ -1,6 +1,7 @@
 import AppKit
 import Combine
 import Foundation
+import Network
 import ServiceManagement
 import SwiftUI
 import WeatherKit
@@ -228,7 +229,11 @@ final class AppModel: ObservableObject {
     private var manualRequestExpiresAt: Date = .distantPast
     private var nextRetryAt = Date.distantPast
     private var consecutiveFailures = 0
+    private var retryWhenConnectionRestored = false
     private var wakeObserver: NSObjectProtocol?
+    private var networkMonitor: NWPathMonitor?
+    private var networkMonitorID: UUID?
+    private var wasNetworkAvailable: Bool?
     private var pictureImportTask: Task<Void, Never>?
     private var pictureImportIdentity: UUID?
     private var isPreparingForAppUpdate = false
@@ -419,6 +424,7 @@ final class AppModel: ObservableObject {
         restoreApplicationRetry()
         sourceWarning = unresolvedPromptWarning
         refreshSelectedPreview()
+        startNetworkMonitoring()
         if let keyRecoveryMessage {
             settings.automaticUpdates = false
             status = "Your API key needs attention"
@@ -2219,6 +2225,7 @@ final class AppModel: ObservableObject {
     }
 
     func stopBackgroundTasks() {
+        networkMonitor?.cancel(); networkMonitor = nil; networkMonitorID = nil
         appearanceRefreshTask?.cancel()
         appearanceRefreshTask = nil
         stagedExpiryTask?.cancel(); stagedExpiryTask = nil
@@ -2243,6 +2250,34 @@ final class AppModel: ObservableObject {
                 do { try await self?.waitForHourlyTick() } catch { return }
             }
         }
+    }
+
+    private func startNetworkMonitoring() {
+        guard backgroundTasksAllowed, hourlyServices == nil else { return }
+        let monitor = NWPathMonitor()
+        let monitorID = UUID()
+        networkMonitor = monitor
+        networkMonitorID = monitorID
+        monitor.pathUpdateHandler = { [weak self] path in
+            let available = path.status == .satisfied
+            Task { @MainActor [weak self] in
+                guard let self, self.networkMonitorID == monitorID else { return }
+                let restored = available && (self.wasNetworkAvailable == false
+                    || (self.wasNetworkAvailable == nil && self.retryWhenConnectionRestored))
+                self.wasNetworkAvailable = available
+                if restored { await self.networkConnectionRestored() }
+            }
+        }
+        monitor.start(queue: DispatchQueue(label: "be.spatie.daydreaming.network"))
+    }
+
+    func networkConnectionRestored() async {
+        guard !isPreparingForAppUpdate else { return }
+        appleWeatherProvider.retryAfterConnectionRestored()
+        if retryWhenConnectionRestored { nextRetryAt = .distantPast }
+        generationQueue.retryNow(resumeImmediately: false)
+        if settings.automaticUpdates { await refreshIfNeeded() }
+        else { generationQueue.resume() }
     }
 
     func refreshIfNeeded(force: Bool = false, userInitiated: Bool = false) async {
@@ -2562,6 +2597,7 @@ final class AppModel: ObservableObject {
                     cachedWallpaperUseMessage = nil
                 }
                 activity = .idle; recovery = nil; visibleFailureIsApplication = false
+                retryWhenConnectionRestored = false
                 if !job.intent.intersection([.automaticWallpaper, .manualWallpaper]).isEmpty {
                     consecutiveFailures = 0; nextRetryAt = .distantPast
                 }
@@ -2636,6 +2672,7 @@ final class AppModel: ObservableObject {
             activity = .idle; recovery = nil; status = "Wallpaper updated"
             detail = "Applied the saved wallpaper. No new image request."
             consecutiveFailures = 0; nextRetryAt = .distantPast
+            retryWhenConnectionRestored = false
             refreshSelectedPreview()
         } catch { show(error); visibleFailureIsApplication = true; scheduleRetry() }
     }
@@ -2940,16 +2977,26 @@ final class AppModel: ObservableObject {
 
     private func show(_ error: Error) {
         visibleFailureIsApplication = false
+        retryWhenConnectionRestored = false
         activity = .failed
         switch error {
         case let network as URLError where [.notConnectedToInternet, .networkConnectionLost, .timedOut,
                                             .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed,
                                             .dataNotAllowed].contains(network.code):
+            retryWhenConnectionRestored = true
             status = "Update delayed · Connection unavailable"
             recovery = .retry
             detail = settings.automaticUpdates
                 ? "Your wallpaper stays in place. Daydreaming will retry automatically."
                 : "Your wallpaper stays in place. Try Update Now when you're back online."
+            return
+        case WeatherContextError.forecastUnavailable:
+            retryWhenConnectionRestored = true
+            status = "Update delayed · Weather unavailable"
+            recovery = .retry
+            detail = settings.automaticUpdates
+                ? "Your wallpaper stays in place. Daydreaming will retry automatically."
+                : "Your wallpaper stays in place. Try Update Now when the forecast is available."
             return
         case is WeatherContextError:
             status = "Weather needs your attention"
