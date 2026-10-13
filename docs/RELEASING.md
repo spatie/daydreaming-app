@@ -210,3 +210,14 @@ Version 0.9.1, build 56 was published on October 9, 2026 from source `f9453cc5c7
 - Signed feed SHA256: `81fc9c7c07c197593d053c98dce4c2d62c33a7ed73f91bd6ac97033eeacaa16a`
 
 The public download, GitHub assets and live signed feed matched the manifest. The temporary publication key was revoked. The installed app reports the built source revision and preserves its designated requirement. The GitHub tag points to the built source.
+
+## Published release 0.9.2
+
+Version 0.9.2, build 58 was published on October 13, 2026 from source `0e34e7340988cff626fd7b2790613fec22386c95`. Verification passed 405 app tests and 22 release-tool tests. The universal app and DMG were notarized and stapled, and the app inside the mounted DMG passed Gatekeeper assessment. The release was prepared locally because the GitHub workflow's Apple signing, notarization, Sparkle and WeatherKit secrets were not configured.
+
+- Manifest SHA256: `cadb03fd1e0aef75dc185b9f0d7a73342b6db4ec423f1af4a703f54f191f4bf5`
+- DMG SHA256: `6fbf1ed5f2a7e19775a3b7cbb9122c57761e42a0782d3e912e980494ef9d17f4`
+- ZIP SHA256: `449dc57b0f4ab81b7cff7f9255955de44eaf666e393c6ffd44220ae9faed653f`
+- Signed feed SHA256: `d0d62d9a5e2f8de720762dd289cbcbc8363ef76818b9b53dc820e8613388d2bb`
+
+The public downloads, GitHub assets and live signed feed matched the manifest. The temporary bucket writer was revoked. The installed app reports the built source revision. The GitHub tag points to the built source.
