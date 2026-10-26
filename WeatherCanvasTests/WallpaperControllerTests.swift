@@ -10,6 +10,35 @@ final class WallpaperControllerTests: XCTestCase {
         XCTAssertEqual((options[.allowClipping] as? NSNumber)?.boolValue, true)
     }
 
+    func testOnlyOlderDaydreamingWallpapersAreOutdated() {
+        let current = URL(fileURLWithPath: "/Daydreaming/Cache/new.png")
+        let owns: (String) -> Bool = { $0.hasPrefix("/Daydreaming/") }
+        XCTAssertTrue(WallpaperController.isOutdated(URL(fileURLWithPath: "/Daydreaming/Cache/old.png"), current: current, owns: owns))
+        XCTAssertFalse(WallpaperController.isOutdated(URL(fileURLWithPath: "/Daydreaming/Cache/./new.png"), current: current, owns: owns))
+        XCTAssertFalse(WallpaperController.isOutdated(URL(fileURLWithPath: "/System/Library/Desktop Pictures/Tahoe.heic"), current: current, owns: owns))
+        XCTAssertFalse(WallpaperController.isOutdated(nil, current: current, owns: owns))
+    }
+
+    func testSpaceSyncReplacesOnlyOutdatedDisplaysAndTriesEveryOneAfterAFailure() {
+        let current = URL(fileURLWithPath: "/Daydreaming/Cache/new.png")
+        let shown: [Int: URL?] = [
+            0: URL(fileURLWithPath: "/Daydreaming/Cache/old.png"),
+            1: current,
+            2: URL(fileURLWithPath: "/Users/someone/Pictures/chosen.jpg"),
+            3: nil,
+            4: URL(fileURLWithPath: "/Daydreaming/Cache/older.png"),
+        ]
+        var attempted: [Int] = []
+        XCTAssertThrowsError(try WallpaperController.replaceOutdated(
+            on: [0, 1, 2, 3, 4], with: current, owns: { $0.hasPrefix("/Daydreaming/") },
+            shown: { shown[$0] ?? nil },
+            set: { screen in
+                attempted.append(screen)
+                if screen == 0 { throw CocoaError(.fileWriteUnknown) }
+            }))
+        XCTAssertEqual(attempted, [0, 4])
+    }
+
     func testPortraitPictureFillsLandscapeScreenWithoutStretchingOrEmptyBands() throws {
         let image = CGSize(width: 900, height: 1600)
         let screen = CGSize(width: 1920, height: 1080)

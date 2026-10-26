@@ -184,6 +184,8 @@ final class AppModel: ObservableObject {
     private var imageLedger = ImageGenerationLedger()
     private var applicationRetry: SavedWallpaperApplication?
     private var savedDesktopAtLaunch: URL?
+    /// The wallpaper Daydreaming last put on the desktop, unlike displayedImageURL which can fall back to the original.
+    private var desktopWallpaperURL: URL?
     private var visibleFailureIsApplication = false
     private var allowsHourlyPipeline: Bool { !isDesignPreview || hourlyServices != nil }
     private var pipelineNow: Date { hourlyServices?.now() ?? .now }
@@ -231,6 +233,7 @@ final class AppModel: ObservableObject {
     private var consecutiveFailures = 0
     private var retryWhenConnectionRestored = false
     private var wakeObserver: NSObjectProtocol?
+    private var spaceObserver: NSObjectProtocol?
     private var networkMonitor: NWPathMonitor?
     private var networkMonitorID: UUID?
     private var wasNetworkAvailable: Bool?
@@ -330,6 +333,12 @@ final class AppModel: ObservableObject {
         } else if let path = settings.sourcePath {
             displayedImageURL = URL(fileURLWithPath: path)
         }
+        // displayedImagePath can also hold an imported original that never reached the desktop.
+        if let path = UserDefaults.standard.string(forKey: "desktopWallpaperPath"),
+           ImageStore.owns(path),
+           FileManager.default.fileExists(atPath: path) {
+            desktopWallpaperURL = URL(fileURLWithPath: path)
+        }
 
         do { imageLedger = try Self.generationLedger() }
         catch { generationStorageError = Self.unreadableLedgerMessage }
@@ -379,6 +388,14 @@ final class AppModel: ObservableObject {
             }
         }
 
+        spaceObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.restoreDesktopOnActiveSpace() }
+        }
+
         settings.retryUnresolvedPromptFiles()
         hourCache = HourWallpaperCache(directory: ImageStore.cacheDirectory)
         synchronizeSystemAppearance()
@@ -407,6 +424,7 @@ final class AppModel: ObservableObject {
         generatedToday = imageLedger.count(on: hourlyServices.now())
         hourCache = HourWallpaperCache(directory: hourlyServices.cacheDirectory)
         self.savedDesktopAtLaunch = savedDesktopAtLaunch
+        desktopWallpaperURL = savedDesktopAtLaunch
         displayedImageURL = savedDesktopAtLaunch ?? settings.sourcePath.map { URL(fileURLWithPath: $0) }
         if hourlyServices.runsBackgroundTasks {
             precondition(hourlyServices.sleep != nil, "Injected background scheduling requires an injected sleep")
@@ -463,6 +481,16 @@ final class AppModel: ObservableObject {
             status = "Could not restore your wallpaper"
             detail = error.localizedDescription
         }
+    }
+
+    /// macOS only changes the active Space, so other Spaces keep an older wallpaper until they are shown.
+    func restoreDesktopOnActiveSpace() {
+        // A pending application retry means some displays may already show a newer wallpaper.
+        guard onboardingComplete, settings.automaticUpdates, !isPreparingForAppUpdate, applicationRetry == nil,
+              let desktopWallpaperURL, sourceAvailable(desktopWallpaperURL.path) else { return }
+        // The next Space switch tries again; a visible failure here would offer a Retry that creates images.
+        if let hourlyServices { try? hourlyServices.apply(desktopWallpaperURL) }
+        else { try? WallpaperController.replaceOutdatedWallpapers(with: desktopWallpaperURL) }
     }
 
     var sourceImageURL: URL? {
@@ -2462,8 +2490,6 @@ final class AppModel: ObservableObject {
                 return
             }
             if let failure = error as? WallpaperApplicationFailure {
-                applicationRetry = failure.saved
-                persistApplicationRetry()
                 show(failure.underlying)
                 visibleFailureIsApplication = true
                 scheduleRetry()
@@ -2635,16 +2661,23 @@ final class AppModel: ObservableObject {
         if let hourlyServices { try hourlyServices.apply(url) }
         else { try WallpaperController.apply(url) }
         displayedImageURL = url
+        desktopWallpaperURL = url
         lastUpdated = pipelineNow
         if !isDesignPreview {
             UserDefaults.standard.set(url.path, forKey: "displayedImagePath")
+            UserDefaults.standard.set(url.path, forKey: "desktopWallpaperPath")
             UserDefaults.standard.set(lastUpdated, forKey: "lastWallpaperUpdate")
         }
     }
 
     private func applySavedWallpaper(_ saved: SavedWallpaperApplication) throws {
         activity = .applying
-        try applyPictureToDesktop(saved.url)
+        do { try applyPictureToDesktop(saved.url) }
+        catch {
+            applicationRetry = saved
+            persistApplicationRetry()
+            throw error
+        }
         if saved.job.settings.systemAppearance == settings.systemAppearance { appearanceUpdatePending = false }
         latestWeather = saved.job.weather
         cachedWallpaperUseMessage = nil
