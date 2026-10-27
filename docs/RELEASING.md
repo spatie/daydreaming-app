@@ -221,3 +221,16 @@ Version 0.9.2, build 58 was published on October 13, 2026 from source `0e34e7340
 - Signed feed SHA256: `d0d62d9a5e2f8de720762dd289cbcbc8363ef76818b9b53dc820e8613388d2bb`
 
 The public downloads, GitHub assets and live signed feed matched the manifest. The temporary bucket writer was revoked. The installed app reports the built source revision. The GitHub tag points to the built source.
+
+## Published release 0.9.3
+
+Version 0.9.3, build 60 was published on October 27, 2026 from source `2e799bc3740c2782db5666d9261d11434ebcc7f1`. Verification passed 413 app tests and 22 release-tool tests locally. The universal app and DMG were notarized and stapled, and the app inside the mounted DMG passed Gatekeeper assessment.
+
+- Manifest SHA256: `485e9e1bf444dc4d791a45985f0c1b73cce48a565123accfe6a639da0280b6f0`
+- DMG SHA256: `212273f21770e3f5eeb7dc0fe4fb9a5174a301f60fb645bf9ead2179d96a97a0`
+- ZIP SHA256: `6271fa0248887742a2f64a5f5a4b87d6ed84e484d16e699fbe8b1535d85b806f`
+- Signed feed SHA256: `6e81ad147ed52b884fb0e35543fb59a4fc4b15b1d0d5ba0a00059d3535723973`
+
+The release used the existing Spatie Developer ID and dedicated Sparkle Keychain account. The documented notarization profile was restored with the previously used Apple Team API key and validated by Apple; the owner-only temporary attachment was deleted. The existing dedicated publication writer was reused without rotation. Public downloads, GitHub assets and the live signed feed matched the immutable manifest. The installed app reports the built source revision and preserves its designated requirement. The GitHub tag points to the built source, not this later feed bookkeeping commit.
+
+No paid image creation was used for verification. Real Space switching, fullscreen/new Spaces and signed-app dynamic wallpaper behavior remain unverified.

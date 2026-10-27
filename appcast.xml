@@ -9,6 +9,17 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <description>Daydreaming updates.</description>
         <language>en</language>
         <item>
+            <title>0.9.3</title>
+            <pubDate>Tue, 27 Oct 2026 01:13:06 +0100</pubDate>
+            <sparkle:version>60</sparkle:version>
+            <sparkle:shortVersionString>0.9.3</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[- Keep older Daydreaming wallpapers in sync as you visit other desktop Spaces, leaving wallpapers chosen elsewhere unchanged. Unvisited Spaces update when you open them.
+- Preserve a partially applied wallpaper after a failed light or dark appearance update, and retry the saved image without creating another one.
+]]></description>
+            <enclosure url="https://getdaydreaming.com/releases/Daydreaming-0.9.3-60.dmg" length="7996420" type="application/octet-stream" sparkle:edSignature="taqTw69meFnIueYTdNiqNhfRe33B0lZJjQAczr18cSbxq8RED6vUiOkCaJJs3omM9cGhJp6j+bbk3GiaE43iDQ=="/>
+        </item>
+        <item>
             <title>0.9.2</title>
             <pubDate>Tue, 13 Oct 2026 10:53:01 +0200</pubDate>
             <sparkle:version>58</sparkle:version>
@@ -168,6 +179,6 @@ Daydreaming is free and postcardware. Image creation uses your own OpenAI API ac
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: r+mdRdy2PNu2vzDfRr+2MYEMA1nY/91TdspFSytrp4j0ZILE8clztrUOZqjWVcDEHCbPr9VGMbFdkDd3NN1vBA==
-length: 11749
+edSignature: zrNq3SJGWM8NPwsUGfDB0eZ6gNtpQIz2Q6vPg9E2UzCAyx/5VnQeBNHKRHdL4lvhMocqX3jxouSNvfJlDFMCCQ==
+length: 12724
 -->
